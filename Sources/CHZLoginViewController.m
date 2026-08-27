@@ -32,11 +32,15 @@
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:stack];
 
-    UIImageView *logoView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"icon.png"]];
+    NSString *logoPath = [[NSBundle mainBundle] pathForResource:@"icon" ofType:@"png"];
+    UIImage *logoImage = logoPath.length > 0 ? [UIImage imageWithContentsOfFile:logoPath] : nil;
+    UIImageView *logoView = [[UIImageView alloc] initWithImage:logoImage];
     logoView.contentMode = UIViewContentModeScaleAspectFit;
     logoView.clipsToBounds = YES;
     logoView.accessibilityLabel = @"Logo CHZ PRIV";
+    logoView.backgroundColor = [UIColor clearColor];
     [logoView.heightAnchor constraintEqualToConstant:112.0].active = YES;
+    [logoView.widthAnchor constraintEqualToConstant:112.0].active = YES;
 
     UILabel *logoTitle = [[UILabel alloc] init];
     logoTitle.text = @"CHZ PRIV";

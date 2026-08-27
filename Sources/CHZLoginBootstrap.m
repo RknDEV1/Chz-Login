@@ -1,12 +1,12 @@
 #import <UIKit/UIKit.h>
 #import "CHZLoginViewController.h"
 
-static BOOL CHZLoginWasPresented = NO;
+static BOOL CHZLoginIsVisibleOrPresented = NO;
+static BOOL CHZBootstrapInstalled = NO;
 
-static UIWindow *CHZActiveWindow(void) {
+static UIWindow *CHZFindActiveWindow(void) {
     if (@available(iOS 13.0, *)) {
-        NSSet<UIScene *> *scenes = [UIApplication sharedApplication].connectedScenes;
-        for (UIScene *scene in scenes) {
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
             if (scene.activationState != UISceneActivationStateForegroundActive) continue;
             if (![scene isKindOfClass:[UIWindowScene class]]) continue;
 
@@ -30,65 +30,97 @@ static UIWindow *CHZActiveWindow(void) {
     return nil;
 }
 
-static UIViewController *CHZTopController(UIViewController *controller) {
+static UIViewController *CHZVisibleController(UIViewController *controller) {
+    if (!controller) return nil;
     if (controller.presentedViewController && !controller.presentedViewController.isBeingDismissed) {
-        return CHZTopController(controller.presentedViewController);
+        return CHZVisibleController(controller.presentedViewController);
     }
     if ([controller isKindOfClass:[UINavigationController class]]) {
-        return CHZTopController(((UINavigationController *)controller).visibleViewController);
+        return CHZVisibleController(((UINavigationController *)controller).visibleViewController);
     }
     if ([controller isKindOfClass:[UITabBarController class]]) {
-        return CHZTopController(((UITabBarController *)controller).selectedViewController);
+        return CHZVisibleController(((UITabBarController *)controller).selectedViewController);
     }
     return controller;
 }
 
-static void CHZPresentLoginIfPossible(void);
+static void CHZTryPresentLogin(void);
 
-static void CHZRetryPresentation(void) {
-    if (CHZLoginWasPresented) return;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        CHZPresentLoginIfPossible();
+static void CHZScheduleRetry(void) {
+    if (CHZLoginIsVisibleOrPresented) return;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        CHZTryPresentLogin();
     });
 }
 
-static void CHZPresentLoginIfPossible(void) {
-    if (CHZLoginWasPresented) return;
+static void CHZTryPresentLogin(void) {
+    if (CHZLoginIsVisibleOrPresented) return;
 
-    UIApplicationState state = [UIApplication sharedApplication].applicationState;
-    if (state != UIApplicationStateActive) {
-        CHZRetryPresentation();
-        return;
-    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (CHZLoginIsVisibleOrPresented) return;
+        if ([UIApplication sharedApplication].applicationState != UIApplicationStateActive) {
+            CHZScheduleRetry();
+            return;
+        }
 
-    UIWindow *window = CHZActiveWindow();
-    UIViewController *root = window.rootViewController;
-    if (!window || !root) {
-        CHZRetryPresentation();
-        return;
-    }
+        UIWindow *window = CHZFindActiveWindow();
+        UIViewController *root = window.rootViewController;
+        UIViewController *visible = CHZVisibleController(root);
+        if (!window || !root || !visible) {
+            CHZScheduleRetry();
+            return;
+        }
 
-    UIViewController *top = CHZTopController(root);
-    if ([top isKindOfClass:[CHZLoginViewController class]]) {
-        CHZLoginWasPresented = YES;
-        return;
-    }
+        if ([visible isKindOfClass:[CHZLoginViewController class]]) {
+            CHZLoginIsVisibleOrPresented = YES;
+            return;
+        }
 
-    CHZLoginWasPresented = YES;
-    CHZLoginViewController *login = [[CHZLoginViewController alloc] init];
-    login.modalPresentationStyle = UIModalPresentationFullScreen;
-    [top presentViewController:login animated:NO completion:nil];
+        CHZLoginViewController *login = [[CHZLoginViewController alloc] init];
+        login.modalPresentationStyle = UIModalPresentationFullScreen;
+        CHZLoginIsVisibleOrPresented = YES;
+        [visible presentViewController:login animated:NO completion:nil];
+    });
 }
+
+static void CHZInstallBootstrap(void) {
+    if (CHZBootstrapInstalled) return;
+    CHZBootstrapInstalled = YES;
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        [center addObserverForName:UIApplicationDidBecomeActiveNotification
+                            object:nil
+                             queue:[NSOperationQueue mainQueue]
+                        usingBlock:^(__unused NSNotification *notification) {
+            CHZLoginIsVisibleOrPresented = NO;
+            CHZTryPresentLogin();
+        }];
+
+        [center addObserverForName:UIApplicationWillEnterForegroundNotification
+                            object:nil
+                             queue:[NSOperationQueue mainQueue]
+                        usingBlock:^(__unused NSNotification *notification) {
+            CHZLoginIsVisibleOrPresented = NO;
+            CHZTryPresentLogin();
+        }];
+
+        CHZTryPresentLogin();
+    });
+}
+
+@interface CHZLoginBootstrapMarker : NSObject
+@end
+
+@implementation CHZLoginBootstrapMarker
+
++ (void)load {
+    CHZInstallBootstrap();
+}
+
+@end
 
 __attribute__((constructor))
-static void CHZLoginBootstrap(void) {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
-                                                          object:nil
-                                                           queue:[NSOperationQueue mainQueue]
-                                                      usingBlock:^(__unused NSNotification *notification) {
-            CHZPresentLoginIfPossible();
-        }];
-        CHZPresentLoginIfPossible();
-    });
+static void CHZLoginBootstrapConstructor(void) {
+    CHZInstallBootstrap();
 }

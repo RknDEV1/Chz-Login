@@ -1,0 +1,61 @@
+name: Build CHZ Login dylib
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Baixar o repositorio
+        uses: actions/checkout@v4
+
+      - name: Verificar arquivos
+        run: |
+          test -f "Sources/CHZAuthManager.m"
+          test -f "Sources/CHZKeychain.m"
+          test -f "Sources/CHZLoginViewController.m"
+          test -f "Vendor/LiteSecure/APIClient.h"
+          test -f "Vendor/LiteSecure/libAPIClient.a"
+
+      - name: Preparar configuracao privada
+        env:
+          CHZ_API_TOKEN: ${{ secrets.CHZ_API_TOKEN }}
+        run: |
+          test -n "$CHZ_API_TOKEN"
+          mkdir -p build/include build/output
+          {
+            printf '%s\n' '#import <Foundation/Foundation.h>'
+            printf '%s' '#define CHZ_API_TOKEN @"'
+            printf '%s' "$CHZ_API_TOKEN"
+            printf '%s\n' '"'
+            printf '%s\n' '#define CHZ_STORE_URL @"https://discord.gg/dukkKRvz"'
+          } > build/include/CHZSecrets.h
+
+      - name: Compilar dylib arm64
+        run: |
+          xcrun --sdk iphoneos clang \
+            -arch arm64 \
+            -fobjc-arc \
+            -fblocks \
+            -dynamiclib \
+            -isysroot "$(xcrun --sdk iphoneos --show-sdk-path)" \
+            -miphoneos-version-min=13.0 \
+            -I"$PWD/Vendor/LiteSecure" \
+            -I"$PWD/build/include" \
+            Sources/CHZKeychain.m \
+            Sources/CHZAuthManager.m \
+            Sources/CHZLoginViewController.m \
+            "$PWD/Vendor/LiteSecure/libAPIClient.a" \
+            -Wl,-force_load,"$PWD/Vendor/LiteSecure/libAPIClient.a" \
+            -framework Foundation \
+            -framework UIKit \
+            -framework Security \
+            -o build/output/CHZLogin.dylib
+
+      - name: Publicar artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: CHZLogin-dylib
+          path: build/output/CHZLogin.dylib
+          if-no-files-found: error

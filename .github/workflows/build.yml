@@ -14,14 +14,25 @@ jobs:
       - name: Baixar o repositorio
         uses: actions/checkout@v4
 
-      - name: Verificar arquivos
+      - name: Verificar arquivos fonte
         run: |
           test -f "Sources/CHZAuthManager.m"
           test -f "Sources/CHZKeychain.m"
           test -f "Sources/CHZLoginViewController.m"
           test -f "Sources/CHZLoginBootstrap.m"
-          test -f "Vendor/LiteSecure/APIClient.h"
-          test -f "Vendor/LiteSecure/libAPIClient.a"
+          test -f "Vendor/API/APIClient.h"
+
+      - name: Baixar biblioteca API da Release privada
+        env:
+          GH_TOKEN: '${{ github.token }}'
+        run: |
+          mkdir -p Vendor/API
+          gh release download v1.3.0 \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "libAPIClient.a" \
+            --dir Vendor/API \
+            --clobber
+          test -f "Vendor/API/libAPIClient.a"
 
       - name: Preparar configuracao privada
         env:
@@ -43,14 +54,14 @@ jobs:
             -ObjC \
             -isysroot "$(xcrun --sdk iphoneos --show-sdk-path)" \
             -miphoneos-version-min=13.0 \
-            -I"$PWD/Vendor/LiteSecure" \
+            -I"$PWD/Vendor/API" \
             -I"$PWD/build/include" \
             Sources/CHZKeychain.m \
             Sources/CHZAuthManager.m \
             Sources/CHZLoginViewController.m \
             Sources/CHZLoginBootstrap.m \
-            "$PWD/Vendor/LiteSecure/libAPIClient.a" \
-            -Wl,-force_load,"$PWD/Vendor/LiteSecure/libAPIClient.a" \
+            "$PWD/Vendor/API/libAPIClient.a" \
+            -Wl,-force_load,"$PWD/Vendor/API/libAPIClient.a" \
             -framework Foundation \
             -framework UIKit \
             -framework Security \

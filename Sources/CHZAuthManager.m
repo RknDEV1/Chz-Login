@@ -3,10 +3,6 @@
 #import "APIClient.h"
 #import "CHZSecrets.h"
 
-@interface CHZAuthManager ()
-@property (nonatomic, strong) APIClient *api;
-@end
-
 @implementation CHZAuthManager
 
 + (instancetype)sharedManager {
@@ -21,15 +17,13 @@
 - (instancetype)init {
     self = [super init];
     if (self) {
-        @try {
-            _api = [APIClient sharedAPIClient];
-            [_api setToken:CHZ_API_TOKEN];
-            [_api setLanguage:@"en"];
-            [_api hideUI:YES];
-            [_api silentMode:YES];
-        } @catch (NSException *exception) {
-            _api = nil;
+        const char *token = [CHZ_API_TOKEN UTF8String];
+        if (token != NULL) {
+            apiclient_set_token(token);
         }
+        apiclient_set_language("en");
+        apiclient_hide_ui(true);
+        apiclient_silent_mode(true);
     }
     return self;
 }
@@ -38,11 +32,9 @@
     NSError *loadError = nil;
     NSString *savedKey = [CHZKeychain loadKey:&loadError];
     if (savedKey.length == 0) {
-        if (failure) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                failure(loadError.localizedDescription ?: @"Nenhuma key salva.");
-            });
-        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (failure) failure(loadError.localizedDescription ?: @"Nenhuma key salva.");
+        });
         return;
     }
     [self loginWithKey:savedKey success:success failure:failure];
@@ -54,70 +46,61 @@
         : @"";
 
     if (trimmedKey.length == 0) {
-        if (failure) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                failure(@"Digite uma key válida.");
-            });
-        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (failure) failure(@"Digite uma key válida.");
+        });
         return;
     }
 
-    APIClient *api = self.api;
-    if (!api) {
-        if (failure) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                failure(@"O serviço de autenticação não foi inicializado.");
-            });
-        }
+    const char *input = [trimmedKey UTF8String];
+    if (input == NULL) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (failure) failure(@"A key possui um formato inválido.");
+        });
         return;
     }
 
-    @try {
-        [api onLogin:trimmedKey
-          onSuccess:^(NSDictionary *data) {
-              if (![data isKindOfClass:[NSDictionary class]]) {
-                  if (failure) {
-                      dispatch_async(dispatch_get_main_queue(), ^{
-                          failure(@"Resposta inválida da API.");
-                      });
-                  }
-                  return;
-              }
-
-              NSError *saveError = nil;
-              BOOL saved = [CHZKeychain saveKey:trimmedKey error:&saveError];
-              dispatch_async(dispatch_get_main_queue(), ^{
-                  if (!saved) {
-                      if (failure) {
-                          failure(saveError.localizedDescription ?: @"Não foi possível salvar a key.");
-                      }
-                  } else if (success) {
-                      success();
-                  }
-              });
-          }
-          onFailure:^(NSDictionary *error) {
-              [CHZKeychain deleteKey:nil];
-              NSString *message = @"Key recusada pela API.";
-              if ([error isKindOfClass:[NSDictionary class]]) {
-                  id detail = error[@"message"] ?: error[@"error"] ?: error[@"msg"];
-                  if ([detail isKindOfClass:[NSString class]] && [detail length] > 0) {
-                      message = detail;
-                  }
-              }
-              if (failure) {
-                  dispatch_async(dispatch_get_main_queue(), ^{
-                      failure(message);
-                  });
-              }
-          }];
-    } @catch (NSException *exception) {
-        if (failure) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                failure(@"Não foi possível concluir a autenticação.");
-            });
+    apiclient_dict_callback onSuccess = ^(const char *json) {
+        NSDictionary *payload = nil;
+        if (json != NULL) {
+            NSData *data = [NSData dataWithBytes:json length:strlen(json)];
+            id parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+            if ([parsed isKindOfClass:[NSDictionary class]]) payload = parsed;
         }
-    }
+        if (json != NULL && payload == nil) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (failure) failure(@"Resposta inválida da API.");
+            });
+            return;
+        }
+        NSError *saveError = nil;
+        BOOL saved = [CHZKeychain saveKey:trimmedKey error:&saveError];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (!saved) {
+                if (failure) failure(saveError.localizedDescription ?: @"Não foi possível salvar a key.");
+            } else if (success) {
+                success();
+            }
+        });
+    };
+
+    apiclient_dict_callback onFailure = ^(const char *json) {
+        [CHZKeychain deleteKey:nil];
+        NSString *message = @"Key recusada pela API.";
+        if (json != NULL) {
+            NSData *data = [NSData dataWithBytes:json length:strlen(json)];
+            id parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+            if ([parsed isKindOfClass:[NSDictionary class]]) {
+                id detail = parsed[@"message"] ?: parsed[@"error"] ?: parsed[@"msg"];
+                if ([detail isKindOfClass:[NSString class]] && [detail length] > 0) message = detail;
+            }
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (failure) failure(message);
+        });
+    };
+
+    apiclient_on_login(input, onSuccess, onFailure);
 }
 
 - (void)clearSavedKey {
@@ -125,4 +108,3 @@
 }
 
 @end
-

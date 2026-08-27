@@ -3,9 +3,13 @@ name: Build CHZ Login dylib
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: macos-latest
+
     steps:
       - name: Baixar o repositorio
         uses: actions/checkout@v4
@@ -15,6 +19,7 @@ jobs:
           test -f "Sources/CHZAuthManager.m"
           test -f "Sources/CHZKeychain.m"
           test -f "Sources/CHZLoginViewController.m"
+          test -f "Sources/CHZLoginBootstrap.m"
           test -f "Vendor/LiteSecure/APIClient.h"
           test -f "Vendor/LiteSecure/libAPIClient.a"
 
@@ -35,6 +40,7 @@ jobs:
             -fobjc-arc \
             -fblocks \
             -dynamiclib \
+            -ObjC \
             -isysroot "$(xcrun --sdk iphoneos --show-sdk-path)" \
             -miphoneos-version-min=13.0 \
             -I"$PWD/Vendor/LiteSecure" \
@@ -42,6 +48,7 @@ jobs:
             Sources/CHZKeychain.m \
             Sources/CHZAuthManager.m \
             Sources/CHZLoginViewController.m \
+            Sources/CHZLoginBootstrap.m \
             "$PWD/Vendor/LiteSecure/libAPIClient.a" \
             -Wl,-force_load,"$PWD/Vendor/LiteSecure/libAPIClient.a" \
             -framework Foundation \
@@ -49,7 +56,12 @@ jobs:
             -framework Security \
             -o build/output/CHZLogin.dylib
 
-      - name: Publicar artefato
+      - name: Verificar artifact
+        run: |
+          test -f build/output/CHZLogin.dylib
+          file build/output/CHZLogin.dylib
+
+      - name: Publicar artifact
         uses: actions/upload-artifact@v4
         with:
           name: CHZLogin-dylib

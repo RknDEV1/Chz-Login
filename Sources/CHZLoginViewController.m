@@ -32,6 +32,12 @@
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:stack];
 
+    UIImageView *logoView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"icon.png"]];
+    logoView.contentMode = UIViewContentModeScaleAspectFit;
+    logoView.clipsToBounds = YES;
+    logoView.accessibilityLabel = @"Logo CHZ PRIV";
+    [logoView.heightAnchor constraintEqualToConstant:112.0].active = YES;
+
     UILabel *logoTitle = [[UILabel alloc] init];
     logoTitle.text = @"CHZ PRIV";
     logoTitle.textColor = [UIColor whiteColor];
@@ -72,6 +78,7 @@
     links.spacing = 12.0;
     links.distribution = UIStackViewDistributionFillEqually;
 
+    [stack addArrangedSubview:logoView];
     [stack addArrangedSubview:logoTitle];
     [stack addArrangedSubview:subtitle];
     [stack addArrangedSubview:[[UIView alloc] init]];

@@ -20,7 +20,7 @@ jobs:
 
       - name: Preparar configuracao privada
         env:
-          CHZ_API_TOKEN: ${{ secrets.CHZ_API_TOKEN }}
+          CHZ_API_TOKEN: '${{ secrets.CHZ_API_TOKEN }}'
         run: |
           test -n "$CHZ_API_TOKEN"
           mkdir -p build/include build/output

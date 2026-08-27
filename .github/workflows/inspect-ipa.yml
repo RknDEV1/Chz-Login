@@ -15,7 +15,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p diagnostic
-          gh release download v1.0.0 \
+          gh release download v1.1.0 \
             --repo "$GITHUB_REPOSITORY" \
             --pattern '*.ipa' \
             --dir diagnostic \

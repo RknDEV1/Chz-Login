@@ -1,18 +1,21 @@
 #import <UIKit/UIKit.h>
 #import "CHZLoginViewController.h"
 
-static BOOL CHZLoginIsVisibleOrPresented = NO;
-static BOOL CHZBootstrapInstalled = NO;
+static BOOL CHZLoginPresentationInProgress = NO;
+static BOOL CHZLoginAlreadyPresented = NO;
+static BOOL CHZBootstrapWasInstalled = NO;
 
-static UIWindow *CHZFindActiveWindow(void) {
+static UIWindow *CHZFindWindow(void) {
+    UIApplication *application = [UIApplication sharedApplication];
+
     if (@available(iOS 13.0, *)) {
-        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+        for (UIScene *scene in application.connectedScenes) {
             if (scene.activationState != UISceneActivationStateForegroundActive) continue;
             if (![scene isKindOfClass:[UIWindowScene class]]) continue;
 
             UIWindowScene *windowScene = (UIWindowScene *)scene;
             for (UIWindow *window in windowScene.windows) {
-                if (window.isKeyWindow && window.rootViewController) return window;
+                if (window.isKeyWindow && !window.hidden && window.rootViewController) return window;
             }
             for (UIWindow *window in windowScene.windows) {
                 if (!window.hidden && window.alpha > 0.0 && window.rootViewController) return window;
@@ -22,90 +25,94 @@ static UIWindow *CHZFindActiveWindow(void) {
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    for (UIWindow *window in [UIApplication sharedApplication].windows) {
-        if (window.isKeyWindow && window.rootViewController) return window;
+    for (UIWindow *window in application.windows) {
+        if (window.isKeyWindow && !window.hidden && window.rootViewController) return window;
     }
 #pragma clang diagnostic pop
 
     return nil;
 }
 
-static UIViewController *CHZVisibleController(UIViewController *controller) {
+static UIViewController *CHZTopViewController(UIViewController *controller) {
     if (!controller) return nil;
+
     if (controller.presentedViewController && !controller.presentedViewController.isBeingDismissed) {
-        return CHZVisibleController(controller.presentedViewController);
+        return CHZTopViewController(controller.presentedViewController);
     }
     if ([controller isKindOfClass:[UINavigationController class]]) {
-        return CHZVisibleController(((UINavigationController *)controller).visibleViewController);
+        return CHZTopViewController(((UINavigationController *)controller).visibleViewController);
     }
     if ([controller isKindOfClass:[UITabBarController class]]) {
-        return CHZVisibleController(((UITabBarController *)controller).selectedViewController);
+        return CHZTopViewController(((UITabBarController *)controller).selectedViewController);
     }
     return controller;
 }
 
-static void CHZTryPresentLogin(void);
+static void CHZSchedulePresentation(void);
 
-static void CHZScheduleRetry(void) {
-    if (CHZLoginIsVisibleOrPresented) return;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        CHZTryPresentLogin();
-    });
-}
-
-static void CHZTryPresentLogin(void) {
-    if (CHZLoginIsVisibleOrPresented) return;
+static void CHZPresentLoginWhenReady(void) {
+    if (CHZLoginAlreadyPresented || CHZLoginPresentationInProgress) return;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (CHZLoginIsVisibleOrPresented) return;
-        if ([UIApplication sharedApplication].applicationState != UIApplicationStateActive) {
-            CHZScheduleRetry();
+        if (CHZLoginAlreadyPresented || CHZLoginPresentationInProgress) return;
+
+        UIApplication *application = [UIApplication sharedApplication];
+        if (application.applicationState != UIApplicationStateActive) {
+            CHZSchedulePresentation();
             return;
         }
 
-        UIWindow *window = CHZFindActiveWindow();
-        UIViewController *root = window.rootViewController;
-        UIViewController *visible = CHZVisibleController(root);
-        if (!window || !root || !visible) {
-            CHZScheduleRetry();
+        UIWindow *window = CHZFindWindow();
+        UIViewController *top = CHZTopViewController(window.rootViewController);
+        if (!window || !top || !top.viewIfLoaded.window) {
+            CHZSchedulePresentation();
             return;
         }
 
-        if ([visible isKindOfClass:[CHZLoginViewController class]]) {
-            CHZLoginIsVisibleOrPresented = YES;
+        if ([top isKindOfClass:[CHZLoginViewController class]]) {
+            CHZLoginAlreadyPresented = YES;
             return;
         }
 
+        CHZLoginPresentationInProgress = YES;
         CHZLoginViewController *login = [[CHZLoginViewController alloc] init];
         login.modalPresentationStyle = UIModalPresentationFullScreen;
-        CHZLoginIsVisibleOrPresented = YES;
-        [visible presentViewController:login animated:NO completion:nil];
+        [top presentViewController:login animated:NO completion:^{
+            CHZLoginPresentationInProgress = NO;
+            CHZLoginAlreadyPresented = YES;
+        }];
     });
 }
 
-static void CHZInstallBootstrap(void) {
-    if (CHZBootstrapInstalled) return;
-    CHZBootstrapInstalled = YES;
+static void CHZSchedulePresentation(void) {
+    if (CHZLoginAlreadyPresented) return;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        CHZPresentLoginWhenReady();
+    });
+}
+
+static void CHZInstallLoginBootstrap(void) {
+    if (CHZBootstrapWasInstalled) return;
+    CHZBootstrapWasInstalled = YES;
 
     dispatch_async(dispatch_get_main_queue(), ^{
         NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
         [center addObserverForName:UIApplicationDidBecomeActiveNotification
                             object:nil
                              queue:[NSOperationQueue mainQueue]
-                        usingBlock:^(__unused NSNotification *notification) {
-            CHZLoginIsVisibleOrPresented = NO;
-            CHZTryPresentLogin();
+                        usingBlock:^(__unused NSNotification *note) {
+            CHZLoginAlreadyPresented = NO;
+            CHZPresentLoginWhenReady();
         }];
 
-        [center addObserverForName:UIApplicationWillEnterForegroundNotification
+        [center addObserverForName:UIApplicationDidFinishLaunchingNotification
                             object:nil
                              queue:[NSOperationQueue mainQueue]
-                        usingBlock:^(__unused NSNotification *notification) {
-            CHZLoginIsVisibleOrPresented = NO;
-            CHZTryPresentLogin();
+                        usingBlock:^(__unused NSNotification *note) {
+            CHZPresentLoginWhenReady();
         }];
 
-        CHZTryPresentLogin();
+        CHZPresentLoginWhenReady();
     });
 }
 
@@ -115,12 +122,12 @@ static void CHZInstallBootstrap(void) {
 @implementation CHZLoginBootstrapMarker
 
 + (void)load {
-    CHZInstallBootstrap();
+    CHZInstallLoginBootstrap();
 }
 
 @end
 
 __attribute__((constructor))
 static void CHZLoginBootstrapConstructor(void) {
-    CHZInstallBootstrap();
+    CHZInstallLoginBootstrap();
 }

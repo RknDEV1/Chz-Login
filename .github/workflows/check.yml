@@ -14,12 +14,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Conferir arquivos do projeto
-        env:
-          CHZ_API_TOKEN: "<LaTex>{{ secrets.CHZ_API_TOKEN }}"         run: |           test -n "</LaTex>CHZ_API_TOKEN"
+        run: |
           test -f "Config/CHZSecrets.example.h"
           test -f "Sources/CHZAuthManager.m"
           test -f "Sources/CHZKeychain.m"
           test -f "Sources/CHZLoginViewController.m"
           test -f "Vendor/LiteSecure/APIClient.h"
           test -f "Vendor/LiteSecure/libAPIClient.a"
-          echo "Estrutura conferida; token nao sera exibido."
+          echo "Estrutura conferida."

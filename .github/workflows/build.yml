@@ -46,7 +46,7 @@ jobs:
 
       - name: Compilar dylib arm64
         run: |
-          xcrun --sdk iphoneos clang \
+          xcrun --sdk iphoneos clang++ \
             -arch arm64 \
             -fobjc-arc \
             -fblocks \

@@ -61,7 +61,6 @@
     self.keyField.returnKeyType = UIReturnKeyDone;
     self.keyField.leftView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 14, 1)];
     self.keyField.leftViewMode = UITextFieldViewModeAlways;
-    self.keyField.heightAnchor.active = YES;
     [self.keyField.heightAnchor constraintEqualToConstant:54.0].active = YES;
 
     self.loginButton = [self buttonWithTitle:@"ENTRAR" action:@selector(loginTapped:) filled:YES];

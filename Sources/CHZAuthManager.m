@@ -27,6 +27,7 @@
         if (udid.length > 0) {
             apiclient_set_udid(udid.UTF8String);
         }
+        NSLog(@"[CHZLogin] UDID configurado: %@; tamanho: %lu", udid.length > 0 ? @"SIM" : @"NAO", (unsigned long)udid.length);
         apiclient_hide_ui(true);
         apiclient_silent_mode(true);
     }

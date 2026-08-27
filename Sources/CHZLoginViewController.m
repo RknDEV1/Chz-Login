@@ -77,6 +77,7 @@
     self.keyField.leftViewMode = UITextFieldViewModeAlways;
     [self.keyField.heightAnchor constraintEqualToConstant:54.0].active = YES;
 
+    UIButton *didButton = [self buttonWithTitle:@"OBTER DID" action:@selector(didTapped:) filled:NO];
     self.loginButton = [self buttonWithTitle:@"ENTRAR" action:@selector(loginTapped:) filled:YES];
     UIButton *storeButton = [self buttonWithTitle:@"LOJA" action:@selector(storeTapped:) filled:NO];
     UIButton *supportButton = [self buttonWithTitle:@"SUPORTE" action:@selector(supportTapped:) filled:NO];
@@ -92,6 +93,7 @@
     [stack addArrangedSubview:[[UIView alloc] init]];
     [stack addArrangedSubview:label];
     [stack addArrangedSubview:self.keyField];
+    [stack addArrangedSubview:didButton];
     [stack addArrangedSubview:self.loginButton];
     [stack addArrangedSubview:links];
 
@@ -141,6 +143,11 @@
             [self presentViewController:alert animated:YES completion:nil];
         });
     }];
+}
+
+- (void)didTapped:(__unused UIButton *)sender {
+    NSURL *url = [NSURL URLWithString:@"https://udid.baontq.xyz/udid.php?id=1530&openurl=threeoneosfive"];
+    if (url) [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
 }
 
 - (void)storeTapped:(__unused UIButton *)sender { [self openStoreLink]; }

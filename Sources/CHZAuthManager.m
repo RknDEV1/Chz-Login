@@ -1,4 +1,5 @@
 #import "CHZAuthManager.h"
+#import <UIKit/UIKit.h>
 #import "CHZKeychain.h"
 #import "APIClient.h"
 #import "CHZSecrets.h"

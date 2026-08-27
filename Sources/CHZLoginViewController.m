@@ -135,7 +135,7 @@
     } failure:^(NSString *message) {
         dispatch_async(dispatch_get_main_queue(), ^{
             sender.enabled = YES;
-            NSString *safeMessage = ([message isKindOfClass:[NSString class]] && message.length > 0) ? message : @"Não foi possível validar a key. Verifique a conexão e tente novamente.";
+            NSString *safeMessage = ([message isKindOfClass:[NSString class]] && message.length > 0) ? message : @"Falha de validação — build CHZ-2026-08-27. Verifique a conexão e tente novamente.";
             UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Login não autorizado" message:safeMessage preferredStyle:UIAlertControllerStyleAlert];
             [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
             [self presentViewController:alert animated:YES completion:nil];

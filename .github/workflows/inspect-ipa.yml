@@ -1,1 +1,46 @@
+name: Inspect IPA dylib load
 
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: macos-latest
+    steps:
+      - name: Baixar IPA da Release privada
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p diagnostic
+          gh release download v1.0.0 \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern '*.ipa' \
+            --dir diagnostic \
+            --clobber
+
+      - name: Extrair IPA
+        run: |
+          IPA="$(find diagnostic -maxdepth 1 -type f -name '*.ipa' | head -n 1)"
+          test -n "$IPA"
+          mkdir -p extracted
+          unzip -q "$IPA" -d extracted
+
+      - name: Verificar LC_LOAD_DYLIB
+        run: |
+          APP="$(find extracted/Payload -maxdepth 1 -type d -name '*.app' | head -n 1)"
+          test -n "$APP"
+          EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")"
+          EXECUTABLE_PATH="$APP/$EXECUTABLE"
+          test -f "$EXECUTABLE_PATH"
+          echo "Executavel: $EXECUTABLE"
+          echo "--- Bibliotecas referenciadas ---"
+          otool -L "$EXECUTABLE_PATH"
+          echo "--- Referencias CHZ ---"
+          otool -L "$EXECUTABLE_PATH" | grep -i 'CHZLogin.dylib' || {
+            echo 'ERRO: CHZLogin.dylib nao esta referenciada pelo executavel.'
+            exit 2
+          }
+          echo 'OK: a referencia CHZLogin.dylib foi encontrada.'

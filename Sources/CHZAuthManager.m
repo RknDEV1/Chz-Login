@@ -22,6 +22,10 @@
             apiclient_set_token(token);
         }
         apiclient_set_language("en");
+        NSString *udid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+        if (udid.length > 0) {
+            apiclient_set_udid(udid.UTF8String);
+        }
         apiclient_hide_ui(true);
         apiclient_silent_mode(true);
     }
@@ -85,6 +89,7 @@
     };
 
     apiclient_dict_callback onFailure = ^(const char *json) {
+        NSLog(@"[CHZLogin] API login failure JSON: %s", json ?: "<null>");
         [CHZKeychain deleteKey:nil];
         NSString *message = @"Key recusada pela API.";
         if (json != NULL) {

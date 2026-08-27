@@ -1,7 +1,7 @@
 #import "CHZLoginViewController.h"
 #import "CHZAuthManager.h"
 
-@interface CHZLoginViewController ()
+@interface CHZLoginViewController () <UITextFieldDelegate>
 @property (nonatomic, strong) UITextField *keyField;
 @property (nonatomic, strong) UIButton *loginButton;
 @property (nonatomic, strong) UIActivityIndicatorView *indicator;
@@ -13,6 +13,9 @@
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor colorWithRed:0.015 green:0.015 blue:0.02 alpha:1.0];
     [self buildInterface];
+    UITapGestureRecognizer *dismissKeyboardTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(chz_dismissKeyboard)];
+    dismissKeyboardTap.cancelsTouchesInView = NO;
+    [self.view addGestureRecognizer:dismissKeyboardTap];
     [[CHZAuthManager sharedManager] validateSavedKeyWithSuccess:^{
         dispatch_async(dispatch_get_main_queue(), ^{
             [self finishLogin];
@@ -69,6 +72,7 @@
     self.keyField.autocorrectionType = UITextAutocorrectionTypeNo;
     self.keyField.autocapitalizationType = UITextAutocapitalizationTypeNone;
     self.keyField.returnKeyType = UIReturnKeyDone;
+    self.keyField.delegate = self;
     self.keyField.leftView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 14, 1)];
     self.keyField.leftViewMode = UITextFieldViewModeAlways;
     [self.keyField.heightAnchor constraintEqualToConstant:54.0].active = YES;
@@ -112,6 +116,15 @@
     return button;
 }
 
+- (void)chz_dismissKeyboard {
+    [self.view endEditing:YES];
+}
+
+- (BOOL)textFieldShouldReturn:(UITextField *)textField {
+    [textField resignFirstResponder];
+    return YES;
+}
+
 - (void)loginTapped:(UIButton *)sender {
     sender.enabled = NO;
     [[CHZAuthManager sharedManager] loginWithKey:self.keyField.text success:^{
@@ -122,7 +135,8 @@
     } failure:^(NSString *message) {
         dispatch_async(dispatch_get_main_queue(), ^{
             sender.enabled = YES;
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Login não autorizado" message:message preferredStyle:UIAlertControllerStyleAlert];
+            NSString *safeMessage = ([message isKindOfClass:[NSString class]] && message.length > 0) ? message : @"Não foi possível validar a key. Verifique a conexão e tente novamente.";
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Login não autorizado" message:safeMessage preferredStyle:UIAlertControllerStyleAlert];
             [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
             [self presentViewController:alert animated:YES completion:nil];
         });

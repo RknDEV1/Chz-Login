@@ -21,44 +21,103 @@
 - (instancetype)init {
     self = [super init];
     if (self) {
-        _api = [APIClient sharedAPIClient];
-        [_api setToken:CHZ_API_TOKEN];
-        [_api setLanguage:@"en"];
-        [_api hideUI:YES];
-        [_api silentMode:YES];
+        @try {
+            _api = [APIClient sharedAPIClient];
+            [_api setToken:CHZ_API_TOKEN];
+            [_api setLanguage:@"en"];
+            [_api hideUI:YES];
+            [_api silentMode:YES];
+        } @catch (NSException *exception) {
+            _api = nil;
+        }
     }
     return self;
 }
 
 - (void)validateSavedKeyWithSuccess:(CHZAuthSuccess)success failure:(CHZAuthFailure)failure {
-    NSString *savedKey = [CHZKeychain loadKey:nil];
+    NSError *loadError = nil;
+    NSString *savedKey = [CHZKeychain loadKey:&loadError];
     if (savedKey.length == 0) {
-        if (failure) failure(@"Nenhuma key salva.");
+        if (failure) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                failure(loadError.localizedDescription ?: @"Nenhuma key salva.");
+            });
+        }
         return;
     }
     [self loginWithKey:savedKey success:success failure:failure];
 }
 
 - (void)loginWithKey:(NSString *)key success:(CHZAuthSuccess)success failure:(CHZAuthFailure)failure {
-    NSString *trimmedKey = [key stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    NSString *trimmedKey = [key isKindOfClass:[NSString class]]
+        ? [key stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]]
+        : @"";
+
     if (trimmedKey.length == 0) {
-        if (failure) failure(@"Digite uma key válida.");
+        if (failure) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                failure(@"Digite uma key válida.");
+            });
+        }
         return;
     }
 
-    __weak typeof(self) weakSelf = self;
-    [self.api onLogin:trimmedKey
-        onSuccess:^(NSDictionary *data) {
-            NSError *saveError = nil;
-            [CHZKeychain saveKey:trimmedKey error:&saveError];
-            if (success) success();
+    APIClient *api = self.api;
+    if (!api) {
+        if (failure) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                failure(@"O serviço de autenticação não foi inicializado.");
+            });
         }
-        onFailure:^(NSDictionary *error) {
-            [CHZKeychain deleteKey:nil];
-            NSString *message = [error isKindOfClass:[NSDictionary class]] ? [error description] : @"Key recusada pela API.";
-            if (failure) failure(message);
-            (void)weakSelf;
-        }];
+        return;
+    }
+
+    @try {
+        [api onLogin:trimmedKey
+          onSuccess:^(NSDictionary *data) {
+              if (![data isKindOfClass:[NSDictionary class]]) {
+                  if (failure) {
+                      dispatch_async(dispatch_get_main_queue(), ^{
+                          failure(@"Resposta inválida da API.");
+                      });
+                  }
+                  return;
+              }
+
+              NSError *saveError = nil;
+              BOOL saved = [CHZKeychain saveKey:trimmedKey error:&saveError];
+              dispatch_async(dispatch_get_main_queue(), ^{
+                  if (!saved) {
+                      if (failure) {
+                          failure(saveError.localizedDescription ?: @"Não foi possível salvar a key.");
+                      }
+                  } else if (success) {
+                      success();
+                  }
+              });
+          }
+          onFailure:^(NSDictionary *error) {
+              [CHZKeychain deleteKey:nil];
+              NSString *message = @"Key recusada pela API.";
+              if ([error isKindOfClass:[NSDictionary class]]) {
+                  id detail = error[@"message"] ?: error[@"error"] ?: error[@"msg"];
+                  if ([detail isKindOfClass:[NSString class]] && [detail length] > 0) {
+                      message = detail;
+                  }
+              }
+              if (failure) {
+                  dispatch_async(dispatch_get_main_queue(), ^{
+                      failure(message);
+                  });
+              }
+          }];
+    } @catch (NSException *exception) {
+        if (failure) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                failure(@"Não foi possível concluir a autenticação.");
+            });
+        }
+    }
 }
 
 - (void)clearSavedKey {
@@ -66,3 +125,4 @@
 }
 
 @end
+

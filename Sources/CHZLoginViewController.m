@@ -182,7 +182,7 @@
         [links.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-24.0],
         [links.heightAnchor constraintEqualToConstant:52.0],
         [links.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-20.0]
-    ];
+    ]];
 }
 
 - (UIButton *)buttonWithTitle:(NSString *)title action:(SEL)action filled:(BOOL)filled {

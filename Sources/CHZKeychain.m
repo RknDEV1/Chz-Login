@@ -20,10 +20,18 @@ static NSString * const CHZKeychainAccount = @"validated_key";
         return NO;
     }
 
-    [self deleteKey:nil];
+    NSData *valueData = [key dataUsingEncoding:NSUTF8StringEncoding];
     NSMutableDictionary *query = [self baseQuery];
-    query[(__bridge id)kSecValueData] = [key dataUsingEncoding:NSUTF8StringEncoding];
-    OSStatus status = SecItemAdd((__bridge CFDictionaryRef)query, NULL);
+    query[(__bridge id)kSecAttrAccessible] = (__bridge id)kSecAttrAccessibleAfterFirstUnlock;
+    query[(__bridge id)kSecValueData] = valueData;
+
+    // Atualiza a key existente; se ainda não existir, cria um novo item.
+    NSDictionary *update = @{(__bridge id)kSecValueData: valueData};
+    OSStatus status = SecItemUpdate((__bridge CFDictionaryRef)[self baseQuery],
+                                    (__bridge CFDictionaryRef)update);
+    if (status == errSecItemNotFound) {
+        status = SecItemAdd((__bridge CFDictionaryRef)query, NULL);
+    }
     if (status != errSecSuccess && error) {
         *error = [NSError errorWithDomain:@"CHZKeychain" code:status userInfo:nil];
     }
@@ -39,7 +47,7 @@ static NSString * const CHZKeychainAccount = @"validated_key";
     OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
     if (status == errSecItemNotFound) return nil;
     if (status != errSecSuccess) {
-        if (error) *error = [NSError errorWithDomain:@"CHZKeychain" code:status userInfo:nil];
+        if (error) *error = [NSError errorWithDomain:@"CHZKeychain" code:status userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Keychain load failed (%d)", (int)status]}];
         return nil;
     }
 

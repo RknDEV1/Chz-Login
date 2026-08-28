@@ -112,7 +112,9 @@
 
     apiclient_dict_callback onFailure = ^(const char *json) {
         NSLog(@"[CHZLogin] API login failure JSON: %s", json ?: "<null>");
-        [CHZKeychain deleteKey:nil];
+        // Não apagar a key em qualquer falha: erros de rede, DID ou resposta
+        // temporária não devem obrigar o usuário a digitar a key novamente.
+        // A remoção deve ocorrer somente por uma ação explícita de logout/limpeza.
         NSString *message = @"Key recusada pela API.";
         if (json != NULL) {
             NSData *data = [NSData dataWithBytes:json length:strlen(json)];

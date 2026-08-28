@@ -63,8 +63,12 @@ static void CHZPresentLoginWhenReady(void) {
         }
 
         UIWindow *window = CHZFindWindow();
+        if (!window) {
+            CHZSchedulePresentation();
+            return;
+        }
         UIViewController *top = CHZTopViewController(window.rootViewController);
-        if (!window || !top || !top.viewIfLoaded.window) {
+        if (!top || !top.viewIfLoaded.window) {
             CHZSchedulePresentation();
             return;
         }
@@ -101,7 +105,8 @@ static void CHZInstallLoginBootstrap(void) {
                             object:nil
                              queue:[NSOperationQueue mainQueue]
                         usingBlock:^(__unused NSNotification *note) {
-            CHZLoginAlreadyPresented = NO;
+            // Não resetar CHZLoginAlreadyPresented ao retornar do segundo plano;
+            // isso fazia a tela reaparecer a cada minimização do app.
             CHZPresentLoginWhenReady();
         }];
 

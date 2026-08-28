@@ -54,7 +54,7 @@ jobs:
           python3 - <<'PY'
           import os
           from pathlib import Path
-          token = os.environ["CHZ_API_TOKEN"].replace("\\r", "").replace("\\n", "").strip()
+          token = "".join(os.environ["CHZ_API_TOKEN"].split())
           if not token:
               raise SystemExit("CHZ_API_TOKEN vazio")
           escaped = token.replace("\\", "\\\\").replace('"', '\\"')

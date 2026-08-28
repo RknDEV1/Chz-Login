@@ -4,6 +4,10 @@
 #import "APIClient.h"
 #import "CHZSecrets.h"
 
+@interface CHZAuthManager ()
+@property (nonatomic, assign) BOOL apiConfigured;
+@end
+
 @implementation CHZAuthManager
 
 + (instancetype)sharedManager {
@@ -18,20 +22,32 @@
 - (instancetype)init {
     self = [super init];
     if (self) {
-        const char *token = [CHZ_API_TOKEN UTF8String];
-        if (token != NULL) {
-            apiclient_set_token(token);
-        }
-        apiclient_set_language("en");
-        NSString *udid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
-        if (udid.length > 0) {
-            apiclient_set_udid(udid.UTF8String);
-        }
-        NSLog(@"[CHZLogin] UDID configurado: %@; tamanho: %lu", udid.length > 0 ? @"SIM" : @"NAO", (unsigned long)udid.length);
-        apiclient_hide_ui(true);
-        apiclient_silent_mode(true);
+        // A biblioteca é configurada sob demanda, somente quando o usuário tenta entrar.
+        _apiConfigured = NO;
     }
     return self;
+}
+
+- (void)configureAPIIfNeeded {
+    if (self.apiConfigured) return;
+
+    // Configure as opções antes do token para evitar a UI nativa da biblioteca.
+    apiclient_hide_ui(true);
+    apiclient_silent_mode(true);
+    apiclient_strict_mode(false);
+    apiclient_set_language("en");
+
+    NSString *udid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+    if (udid.length > 0) {
+        apiclient_set_udid(udid.UTF8String);
+    }
+    NSLog(@"[CHZLogin] UDID configurado: %@; tamanho: %lu", udid.length > 0 ? @"SIM" : @"NAO", (unsigned long)udid.length);
+
+    const char *token = [CHZ_API_TOKEN UTF8String];
+    if (token != NULL) {
+        apiclient_set_token(token);
+    }
+    self.apiConfigured = YES;
 }
 
 - (void)validateSavedKeyWithSuccess:(CHZAuthSuccess)success failure:(CHZAuthFailure)failure {
@@ -57,6 +73,8 @@
         });
         return;
     }
+
+    [self configureAPIIfNeeded];
 
     const char *input = [trimmedKey UTF8String];
     if (input == NULL) {

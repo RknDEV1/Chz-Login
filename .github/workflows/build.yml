@@ -4,77 +4,132 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+env:
+  RELEASE_TAG: v1.3.0
+  SDK: iphoneos
+  ARCH: arm64
 
 jobs:
   build:
     runs-on: macos-latest
 
     steps:
-      - name: Baixar o repositorio
+      - name: Baixar o repositório
         uses: actions/checkout@v4
 
       - name: Verificar arquivos fonte
+        shell: bash
         run: |
-          test -f "Sources/CHZAuthManager.m"
-          test -f "Sources/CHZKeychain.m"
-          test -f "Sources/CHZLoginViewController.m"
-          test -f "Sources/CHZLoginBootstrap.m"
-          test -f "Vendor/API/APIClient.h"
+          set -euo pipefail
+          test -f Vendor/API/APIClient.h
+          test -f Sources/CHZAuthManager.m
+          test -f Sources/CHZKeychain.m
+          test -f Sources/CHZLoginViewController.m
+          test -f Sources/CHZLoginBootstrap.m
 
       - name: Baixar biblioteca API da Release privada
         env:
-          GH_TOKEN: '${{ github.token }}'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p Vendor/API
-          gh release download v1.3.0 \
+          gh release download "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
-            --pattern "libAPIClient.a" \
+            --pattern 'libAPIClient.a' \
             --dir Vendor/API \
             --clobber
-          test -f "Vendor/API/libAPIClient.a"
+          test -f Vendor/API/libAPIClient.a
 
-      - name: Preparar configuracao privada
+      - name: Preparar configuração privada
         env:
-          CHZ_API_TOKEN: '${{ secrets.CHZ_API_TOKEN }}'
+          CHZ_API_TOKEN: ${{ secrets.CHZ_API_TOKEN }}
+        shell: bash
         run: |
+          set -euo pipefail
           test -n "$CHZ_API_TOKEN"
-          CHZ_API_TOKEN_CLEAN="$(printf '%s' "$CHZ_API_TOKEN" | tr -d '\r\n')"
-          test -n "$CHZ_API_TOKEN_CLEAN"
-          mkdir -p build/include build/output
-          printf '%s\n#define CHZ_API_TOKEN @"%s"\n#define CHZ_STORE_URL @"https://discord.gg/dukkKRvz"\n' '#import <Foundation/Foundation.h>' "$CHZ_API_TOKEN_CLEAN" > build/include/CHZSecrets.h
+          mkdir -p build/include
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          token = os.environ["CHZ_API_TOKEN"].replace("\\r", "").replace("\\n", "").strip()
+          if not token:
+              raise SystemExit("CHZ_API_TOKEN vazio")
+          escaped = token.replace("\\", "\\\\").replace('"', '\\"')
+          Path("build/include/CHZSecrets.h").write_text(
+              '#import <Foundation/Foundation.h>\\n'
+              f'#define CHZ_API_TOKEN @"{escaped}"\\n',
+              encoding="utf-8",
+          )
+          PY
+          cp Vendor/API/APIClient.h build/include/APIClient.h
+
+      - name: Compilar fontes Objective-C arm64
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/obj
+          for source in \
+            Sources/CHZAuthManager.m \
+            Sources/CHZKeychain.m \
+            Sources/CHZLoginViewController.m \
+            Sources/CHZLoginBootstrap.m; do
+            object="build/obj/$(basename "${source%.m}").o"
+            xcrun --sdk "$SDK" clang \
+              -arch "$ARCH" \
+              -isysroot "$(xcrun --sdk "$SDK" --show-sdk-path)" \
+              -fobjc-arc \
+              -fblocks \
+              -fmodules \
+              -Ibuild/include \
+              -IVendor/API \
+              -c "$source" \
+              -o "$object"
+          done
 
       - name: Compilar dylib arm64
+        shell: bash
         run: |
-          xcrun --sdk iphoneos clang++ \
-            -arch arm64 \
+          set -euo pipefail
+          xcrun --sdk "$SDK" clang++ \
+            -arch "$ARCH" \
+            -isysroot "$(xcrun --sdk "$SDK" --show-sdk-path)" \
+            -dynamiclib \
             -fobjc-arc \
             -fblocks \
-            -dynamiclib \
-            -ObjC \
-            -isysroot "$(xcrun --sdk iphoneos --show-sdk-path)" \
-            -miphoneos-version-min=13.0 \
-            -I"$PWD/Vendor/API" \
-            -I"$PWD/build/include" \
-            Sources/CHZKeychain.m \
-            Sources/CHZAuthManager.m \
-            Sources/CHZLoginViewController.m \
-            Sources/CHZLoginBootstrap.m \
-            "$PWD/Vendor/API/libAPIClient.a" \
-            -Wl,-force_load,"$PWD/Vendor/API/libAPIClient.a" \
+            -Wl,-dead_strip \
+            -Wl,-x \
+            -Wl,-S \
+            -Wl,-install_name,@executable_path/CHZLogin.dylib \
+            build/obj/CHZAuthManager.o \
+            build/obj/CHZKeychain.o \
+            build/obj/CHZLoginViewController.o \
+            build/obj/CHZLoginBootstrap.o \
+            Vendor/API/libAPIClient.a \
             -framework Foundation \
             -framework UIKit \
             -framework Security \
-            -o build/output/CHZLogin.dylib
+            -lc++ \
+            -o build/CHZLogin.dylib
+          test -f build/CHZLogin.dylib
+          xcrun --sdk "$SDK" file build/CHZLogin.dylib || true
 
-      - name: Verificar artifact
-        run: |
-          test -f build/output/CHZLogin.dylib
-          file build/output/CHZLogin.dylib
-
-      - name: Publicar artifact
+      - name: Publicar artifact de backup
         uses: actions/upload-artifact@v4
         with:
-          name: CHZLogin-dylib
-          path: build/output/CHZLogin.dylib
+          name: CHZLogin-dylib-${{ github.run_number }}
+          path: build/CHZLogin.dylib
           if-no-files-found: error
+          retention-days: 7
+
+      - name: Publicar dylib diretamente na Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" build/CHZLogin.dylib \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber

@@ -58,11 +58,12 @@ jobs:
           if not token:
               raise SystemExit("CHZ_API_TOKEN vazio")
           escaped = token.replace("\\", "\\\\").replace('"', '\\"')
-          Path("build/include/CHZSecrets.h").write_text(
-              '#import <Foundation/Foundation.h>\\n'
-              f'#define CHZ_API_TOKEN @"{escaped}"\\n',
-              encoding="utf-8",
+          newline = chr(10)
+          content = (
+              '#import <Foundation/Foundation.h>' + newline
+              + f'#define CHZ_API_TOKEN @"{escaped}"' + newline
           )
+          Path("build/include/CHZSecrets.h").write_text(content, encoding="utf-8")
           PY
           cp Vendor/API/APIClient.h build/include/APIClient.h
 

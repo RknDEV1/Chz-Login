@@ -123,7 +123,13 @@
         });
     };
 
-    apiclient_on_login(input, onSuccess, onFailure);
+    // Build de isolamento: não chamar a biblioteca; confirmar que o botão não causa crash.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (failure) failure(@"Teste de interface: chamada da API temporariamente desativada.");
+    });
+    (void)input;
+    (void)onSuccess;
+    (void)onFailure;
 }
 
 - (void)clearSavedKey {

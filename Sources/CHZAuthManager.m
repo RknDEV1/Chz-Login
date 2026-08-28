@@ -1,5 +1,6 @@
 #import "CHZAuthManager.h"
 #import <UIKit/UIKit.h>
+#import <Block.h>
 #import "CHZKeychain.h"
 #import "APIClient.h"
 #import "CHZSecrets.h"
@@ -123,13 +124,11 @@
         });
     };
 
-    // Build de isolamento: não chamar a biblioteca; confirmar que o botão não causa crash.
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (failure) failure(@"Teste de interface: chamada da API temporariamente desativada.");
-    });
-    (void)input;
-    (void)onSuccess;
-    (void)onFailure;
+    // A biblioteca pode executar os callbacks de forma assíncrona.
+    // Mantemos cópias em heap para evitar uso de blocos temporários já liberados.
+    apiclient_dict_callback safeSuccess = Block_copy(onSuccess);
+    apiclient_dict_callback safeFailure = Block_copy(onFailure);
+    apiclient_on_login(input, safeSuccess, safeFailure);
 }
 
 - (void)clearSavedKey {

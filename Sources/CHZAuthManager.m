@@ -1,6 +1,5 @@
 #import "CHZAuthManager.h"
 #import <UIKit/UIKit.h>
-#import <Block.h>
 #import "CHZKeychain.h"
 #import "APIClient.h"
 #import "CHZSecrets.h"
@@ -126,8 +125,8 @@
 
     // A biblioteca pode executar os callbacks de forma assíncrona.
     // Mantemos cópias em heap para evitar uso de blocos temporários já liberados.
-    apiclient_dict_callback safeSuccess = Block_copy(onSuccess);
-    apiclient_dict_callback safeFailure = Block_copy(onFailure);
+    apiclient_dict_callback safeSuccess = [onSuccess copy];
+    apiclient_dict_callback safeFailure = [onFailure copy];
     apiclient_on_login(input, safeSuccess, safeFailure);
 }
 

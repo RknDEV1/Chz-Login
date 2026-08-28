@@ -37,11 +37,9 @@
     apiclient_strict_mode(false);
     apiclient_set_language("en");
 
-    NSString *udid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
-    if (udid.length > 0) {
-        apiclient_set_udid(udid.UTF8String);
-    }
-    NSLog(@"[CHZLogin] UDID configurado: %@; tamanho: %lu", udid.length > 0 ? @"SIM" : @"NAO", (unsigned long)udid.length);
+    // Diagnóstico: não enviar identifierForVendor nesta build de isolamento.
+    // O serviço pode exigir o UDID real obtido pelo seu próprio procedimento.
+    NSLog(@"[CHZLogin] Build de isolamento: UDID não enviado à biblioteca");
 
     const char *token = [CHZ_API_TOKEN UTF8String];
     if (token != NULL) {

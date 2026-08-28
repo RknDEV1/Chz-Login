@@ -37,9 +37,13 @@
     apiclient_strict_mode(false);
     apiclient_set_language("en");
 
-    // Diagnóstico: não enviar identifierForVendor nesta build de isolamento.
-    // O serviço pode exigir o UDID real obtido pelo seu próprio procedimento.
-    NSLog(@"[CHZLogin] Build de isolamento: UDID não enviado à biblioteca");
+    NSString *uid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+    if (uid.length > 0) {
+        apiclient_set_udid(uid.UTF8String);
+        NSLog(@"[CHZLogin] UID configurado: SIM; tamanho: %lu", (unsigned long)uid.length);
+    } else {
+        NSLog(@"[CHZLogin] UID configurado: NAO");
+    }
 
     const char *token = [CHZ_API_TOKEN UTF8String];
     if (token != NULL) {
@@ -127,7 +131,15 @@
     // Mantemos cópias em heap para evitar uso de blocos temporários já liberados.
     apiclient_dict_callback safeSuccess = [onSuccess copy];
     apiclient_dict_callback safeFailure = [onFailure copy];
-    apiclient_on_login(input, safeSuccess, safeFailure);
+    // A documentação indica que check device deve ocorrer antes do login.
+    // Tanto sucesso quanto falha do check seguem para login: um dispositivo
+    // ausente deve ser ativado pela key, enquanto um existente é revalidado.
+    apiclient_dict_callback checkDone = ^(const char *json) {
+        (void)json;
+        apiclient_on_login(input, safeSuccess, safeFailure);
+    };
+    apiclient_dict_callback safeCheckDone = [checkDone copy];
+    apiclient_on_check_device(safeCheckDone, safeCheckDone);
 }
 
 - (void)clearSavedKey {

@@ -67,11 +67,13 @@ static NSDate *CHZParseExpiration(NSString *value, NSTimeZone *timeZone) {
     return nil;
 }
 
-static BOOL CHZLibraryConfirmsCurrentKeyAndExpiration(NSString *inputKey) {
+static BOOL CHZLibraryKeyMatches(NSString *inputKey) {
     const char *libraryKeyCString = apiclient_get_key();
     NSString *libraryKey = libraryKeyCString ? [NSString stringWithUTF8String:libraryKeyCString] : nil;
-    if (libraryKey.length == 0 || ![libraryKey isEqualToString:inputKey]) return NO;
+    return libraryKey.length > 0 && [libraryKey isEqualToString:inputKey];
+}
 
+static BOOL CHZLibraryExpirationIsValid(void) {
     const char *expirationCString = apiclient_get_expired_at();
     NSString *expirationValue = expirationCString ? [NSString stringWithUTF8String:expirationCString] : nil;
     NSDate *expirationDate = CHZParseExpiration(expirationValue, [NSTimeZone timeZoneForSecondsFromGMT:0]);
@@ -169,10 +171,15 @@ static BOOL CHZLibraryConfirmsCurrentKeyAndExpiration(NSString *inputKey) {
             if ([parsed isKindOfClass:[NSDictionary class]]) payload = parsed;
         }
         BOOL explicitPayloadSuccess = CHZPayloadExplicitlyAuthorizesLogin(payload);
-        BOOL libraryConfirmedKey = CHZLibraryConfirmsCurrentKeyAndExpiration(trimmedKey);
-        if (!explicitPayloadSuccess || !libraryConfirmedKey) {
+        BOOL libraryKeyMatches = CHZLibraryKeyMatches(trimmedKey);
+        BOOL expirationIsValid = CHZLibraryExpirationIsValid();
+        if (!explicitPayloadSuccess || !libraryKeyMatches || !expirationIsValid) {
+            NSString *diagnostic = [NSString stringWithFormat:@"Validação recusada — API: %@; key confirmada: %@; expiração válida: %@.",
+                                     explicitPayloadSuccess ? @"sim" : @"não",
+                                     libraryKeyMatches ? @"sim" : @"não",
+                                     expirationIsValid ? @"sim" : @"não"];
             dispatch_async(dispatch_get_main_queue(), ^{
-                if (failure) failure(@"A API não confirmou a validade da key ou a key está expirada.");
+                if (failure) failure(diagnostic);
             });
             return;
         }

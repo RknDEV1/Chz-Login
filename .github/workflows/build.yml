@@ -36,7 +36,7 @@ jobs:
           set -euo pipefail
           mkdir -p Vendor/API
           curl --fail --location --retry 3 \
-            "https://github.com/${API_REPO}/raw/refs/heads/${API_REF}/API%20%28Lite%20Secure%29/libAPIClient.a" \
+            "https://github.com/${API_REPO}/raw/${API_REF}/API%20%28Lite%20Secure%29/libAPIClient.a" \
             --output Vendor/API/libAPIClient.a
           test -s Vendor/API/libAPIClient.a
 

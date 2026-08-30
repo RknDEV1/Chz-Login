@@ -21,17 +21,12 @@
     dismissKeyboardTap.cancelsTouchesInView = NO;
     [self.view addGestureRecognizer:dismissKeyboardTap];
 
-    [[CHZAuthManager sharedManager] validateSavedKeyWithSuccess:^{
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self finishLogin];
-        });
-    } failure:^(__unused NSString *message) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            self.keyField.text = @"";
-            self.keyField.enabled = YES;
-            self.loginButton.enabled = YES;
-        });
-    }];
+    // O login automático fica desativado nesta versão para manter a tela visível
+    // durante a inicialização e permitir testar o design. O fechamento continua
+    // ocorrendo somente após sucesso no botão ENTRAR.
+    self.keyField.text = @"";
+    self.keyField.enabled = YES;
+    self.loginButton.enabled = YES;
 }
 
 - (void)viewDidLayoutSubviews {

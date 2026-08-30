@@ -6,6 +6,7 @@
 
 @interface CHZAuthManager ()
 @property (nonatomic, assign) BOOL apiConfigured;
+@property (nonatomic, assign) BOOL apiConfigurationFailed;
 @property (nonatomic, strong) APIClient *apiClient;
 @end
 
@@ -51,12 +52,17 @@ static NSString *CHZMessageFromDictionary(NSDictionary *dictionary) {
     self = [super init];
     if (self) {
         _apiConfigured = NO;
+        _apiConfigurationFailed = NO;
     }
     return self;
 }
 
-- (void)configureAPIIfNeeded {
-    if (self.apiConfigured) return;
+- (BOOL)configureAPIIfNeeded:(NSString **)configurationError {
+    if (self.apiConfigured) return YES;
+    if (self.apiConfigurationFailed) {
+        if (configurationError) *configurationError = @"Token da API não configurado neste build.";
+        return NO;
+    }
 
     self.apiClient = [APIClient sharedAPIClient];
     [self.apiClient hideUI:YES];
@@ -69,12 +75,16 @@ static NSString *CHZMessageFromDictionary(NSDictionary *dictionary) {
         [self.apiClient setUDID:uid];
     }
 
-    NSString *token = CHZ_API_TOKEN;
-    if (token.length > 0 && ![token isEqualToString:@"COLOQUE_SEU_TOKEN_AQUI"]) {
-        [self.apiClient setToken:token];
+    NSString *token = [CHZ_API_TOKEN stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (token.length == 0 || [token isEqualToString:@"COLOQUE_SEU_TOKEN_AQUI"]) {
+        self.apiConfigurationFailed = YES;
+        if (configurationError) *configurationError = @"Token da API não configurado neste build.";
+        return NO;
     }
 
+    [self.apiClient setToken:token];
     self.apiConfigured = YES;
+    return YES;
 }
 
 - (void)validateSavedKeyWithSuccess:(CHZAuthSuccess)success failure:(CHZAuthFailure)failure {
@@ -101,7 +111,13 @@ static NSString *CHZMessageFromDictionary(NSDictionary *dictionary) {
         return;
     }
 
-    [self configureAPIIfNeeded];
+    NSString *configurationError = nil;
+    if (![self configureAPIIfNeeded:&configurationError]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (failure) failure(configurationError ?: @"Configuração da API inválida.");
+        });
+        return;
+    }
 
     void (^acceptLogin)(void) = ^{
         NSError *saveError = nil;

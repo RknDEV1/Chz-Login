@@ -255,7 +255,7 @@
 - (void)supportTapped:(__unused UIButton *)sender { [self openStoreLink]; }
 
 - (void)openStoreLink {
-    NSURL *url = [NSURL URLWithString:@"https://discord.gg/dukkKRvz"];
+    NSURL *url = [NSURL URLWithString:@"https://discord.gg/room222"];
     if (url) [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
 }
 

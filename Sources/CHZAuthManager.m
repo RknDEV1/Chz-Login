@@ -8,6 +8,20 @@
 @property (nonatomic, assign) BOOL apiConfigured;
 @end
 
+static BOOL CHZAuthMessageIndicatesExpiredKey(NSString *message) {
+    if (![message isKindOfClass:[NSString class]]) return NO;
+    NSString *normalized = [message lowercaseString];
+    NSArray<NSString *> *markers = @[
+        @"expired", @"expire", @"expiration", @"expirad", @"expiradа",
+        @"invalid key", @"key inválida", @"key invalida", @"key refused",
+        @"revoked", @"revogada", @"disabled", @"desativada", @"inactive", @"inativa"
+    ];
+    for (NSString *marker in markers) {
+        if ([normalized containsString:marker]) return YES;
+    }
+    return NO;
+}
+
 @implementation CHZAuthManager
 
 + (instancetype)sharedManager {
@@ -112,9 +126,9 @@
 
     apiclient_dict_callback onFailure = ^(const char *json) {
         NSLog(@"[CHZLogin] API login failure JSON: %s", json ?: "<null>");
-        // Não apagar a key em qualquer falha: erros de rede, DID ou resposta
-        // temporária não devem obrigar o usuário a digitar a key novamente.
-        // A remoção deve ocorrer somente por uma ação explícita de logout/limpeza.
+        // Falhas de rede ou respostas temporárias mantêm a key salva.
+        // A key só é removida quando a resposta identifica expiração,
+        // revogação, desativação ou invalidez explícita.
         NSString *message = @"Key recusada pela API.";
         if (json != NULL) {
             NSData *data = [NSData dataWithBytes:json length:strlen(json)];
@@ -124,7 +138,13 @@
                 if ([detail isKindOfClass:[NSString class]] && [detail length] > 0) message = detail;
             }
         }
+        NSString *rawResponse = json ? [NSString stringWithUTF8String:json] : nil;
+        BOOL shouldClearKey = CHZAuthMessageIndicatesExpiredKey(message)
+            || CHZAuthMessageIndicatesExpiredKey(rawResponse);
         dispatch_async(dispatch_get_main_queue(), ^{
+            if (shouldClearKey) {
+                [CHZKeychain deleteKey:nil];
+            }
             if (failure) failure(message);
         });
     };

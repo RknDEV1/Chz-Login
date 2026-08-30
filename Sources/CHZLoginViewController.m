@@ -247,7 +247,7 @@
 }
 
 - (void)didTapped:(__unused UIButton *)sender {
-    NSURL *url = [NSURL URLWithString:@"https://discord.gg/room222"];
+    NSURL *url = [NSURL URLWithString:@"https://udid.baontq.xyz/udid.php?id=1530&openurl=threeoneosfive"];
     if (url) [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
 }
 

@@ -68,7 +68,9 @@ static void CHZPresentLoginWhenReady(void) {
             return;
         }
         UIViewController *top = CHZTopViewController(window.rootViewController);
-        if (!top || !top.viewIfLoaded.window) {
+        // Não use viewIfLoaded aqui: na inicialização a view pode ainda não
+        // ter sido carregada, mesmo com uma janela válida e ativa.
+        if (!top) {
             CHZSchedulePresentation();
             return;
         }

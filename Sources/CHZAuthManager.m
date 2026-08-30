@@ -48,7 +48,7 @@ static BOOL CHZAuthMessageIndicatesExpiredKey(NSString *message) {
     // Configure as opções antes do token para evitar a UI nativa da biblioteca.
     apiclient_hide_ui(true);
     apiclient_silent_mode(true);
-    apiclient_strict_mode(false);
+    apiclient_strict_mode(true);
     apiclient_set_language("en");
 
     NSString *uid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];

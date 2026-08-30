@@ -7,9 +7,10 @@ permissions:
   contents: write
 
 env:
-  RELEASE_TAG: v1.3.0
   SDK: iphoneos
   ARCH: arm64
+  API_REPO: baontq23/Logos-API-Authentication
+  API_REF: d7161ccd290cd179c3c77ffe6394afed3e8cdba5
 
 jobs:
   build:
@@ -29,19 +30,15 @@ jobs:
           test -f Sources/CHZLoginViewController.m
           test -f Sources/CHZLoginBootstrap.m
 
-      - name: Baixar biblioteca API da Release privada
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Baixar biblioteca Lite Secure compatível
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p Vendor/API
-          gh release download "$RELEASE_TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --pattern 'libAPIClient.a' \
-            --dir Vendor/API \
-            --clobber
-          test -f Vendor/API/libAPIClient.a
+          curl --fail --location --retry 3 \
+            "https://github.com/${API_REPO}/raw/refs/heads/${API_REF}/API%20%28Lite%20Secure%29/libAPIClient.a" \
+            --output Vendor/API/libAPIClient.a
+          test -s Vendor/API/libAPIClient.a
 
       - name: Preparar configuração privada
         env:
@@ -126,12 +123,3 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Publicar dylib diretamente na Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh release upload "$RELEASE_TAG" build/CHZLogin.dylib \
-            --repo "$GITHUB_REPOSITORY" \
-            --clobber

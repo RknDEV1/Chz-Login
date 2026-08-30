@@ -4,4 +4,3 @@
 // Nunca faça commit do arquivo real.
 #define CHZ_API_TOKEN @"COLOQUE_SEU_TOKEN_AQUI"
 #define CHZ_STORE_URL @"https://discord.gg/room222"
-

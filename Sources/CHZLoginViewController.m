@@ -14,7 +14,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.view.backgroundColor = [UIColor colorWithRed:0.008 green:0.008 blue:0.012 alpha:1.0];
+    self.view.backgroundColor = [UIColor colorWithRed:0.004 green:0.003 blue:0.010 alpha:1.0];
     [self buildModernInterface];
 
     UITapGestureRecognizer *dismissKeyboardTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(chz_dismissKeyboard)];
@@ -42,9 +42,9 @@
 - (void)buildModernInterface {
     self.backgroundGradient = [CAGradientLayer layer];
     self.backgroundGradient.colors = @[
-        (id)[UIColor colorWithRed:0.015 green:0.005 blue:0.008 alpha:1.0].CGColor,
-        (id)[UIColor colorWithRed:0.055 green:0.008 blue:0.012 alpha:1.0].CGColor,
-        (id)[UIColor colorWithRed:0.008 green:0.008 blue:0.012 alpha:1.0].CGColor
+        (id)[UIColor colorWithRed:0.004 green:0.002 blue:0.012 alpha:1.0].CGColor,
+        (id)[UIColor colorWithRed:0.035 green:0.006 blue:0.085 alpha:1.0].CGColor,
+        (id)[UIColor colorWithRed:0.006 green:0.004 blue:0.018 alpha:1.0].CGColor
     ];
     self.backgroundGradient.locations = @[@0.0, @0.48, @1.0];
     [self.view.layer insertSublayer:self.backgroundGradient atIndex:0];
@@ -60,14 +60,25 @@
     content.translatesAutoresizingMaskIntoConstraints = NO;
     [self.scrollView addSubview:content];
 
-    UIImage *logoImage = [UIImage imageNamed:@"icon.png"];
-    if (!logoImage) logoImage = [UIImage imageNamed:@"icon"];
-    UIImageView *logoView = [[UIImageView alloc] initWithImage:logoImage];
-    logoView.translatesAutoresizingMaskIntoConstraints = NO;
-    logoView.contentMode = UIViewContentModeScaleAspectFit;
-    logoView.clipsToBounds = YES;
-    logoView.accessibilityLabel = @"Logo CHZ PRIV";
-    [content addSubview:logoView];
+    UILabel *brandTop = [[UILabel alloc] init];
+    brandTop.translatesAutoresizingMaskIntoConstraints = NO;
+    brandTop.text = @"Room";
+    brandTop.textColor = [UIColor colorWithRed:0.88 green:0.82 blue:1.0 alpha:1.0];
+    brandTop.font = [UIFont fontWithName:@"Copperplate-Bold" size:42.0] ?: [UIFont systemFontOfSize:42.0 weight:UIFontWeightBlack];
+    brandTop.textAlignment = NSTextAlignmentCenter;
+    brandTop.adjustsFontSizeToFitWidth = YES;
+    brandTop.minimumScaleFactor = 0.72;
+    [content addSubview:brandTop];
+
+    UILabel *brandBottom = [[UILabel alloc] init];
+    brandBottom.translatesAutoresizingMaskIntoConstraints = NO;
+    brandBottom.text = @"Injection";
+    brandBottom.textColor = [UIColor colorWithRed:0.68 green:0.34 blue:1.0 alpha:1.0];
+    brandBottom.font = [UIFont fontWithName:@"Copperplate-Bold" size:34.0] ?: [UIFont systemFontOfSize:34.0 weight:UIFontWeightBold];
+    brandBottom.textAlignment = NSTextAlignmentCenter;
+    brandBottom.adjustsFontSizeToFitWidth = YES;
+    brandBottom.minimumScaleFactor = 0.62;
+    [content addSubview:brandBottom];
 
     UILabel *subtitle = [[UILabel alloc] init];
     subtitle.translatesAutoresizingMaskIntoConstraints = NO;
@@ -82,8 +93,8 @@
     self.cardView.backgroundColor = [UIColor colorWithWhite:0.055 alpha:0.88];
     self.cardView.layer.cornerRadius = 24.0;
     self.cardView.layer.borderWidth = 1.0;
-    self.cardView.layer.borderColor = [UIColor colorWithRed:1.0 green:0.12 blue:0.16 alpha:0.48].CGColor;
-    self.cardView.layer.shadowColor = [UIColor colorWithRed:0.9 green:0.02 blue:0.05 alpha:0.55].CGColor;
+    self.cardView.layer.borderColor = [UIColor colorWithRed:0.58 green:0.20 blue:1.0 alpha:0.62].CGColor;
+    self.cardView.layer.shadowColor = [UIColor colorWithRed:0.48 green:0.08 blue:1.0 alpha:0.70].CGColor;
     self.cardView.layer.shadowOpacity = 0.35;
     self.cardView.layer.shadowRadius = 22.0;
     self.cardView.layer.shadowOffset = CGSizeMake(0, 10);
@@ -141,13 +152,17 @@
         [content.trailingAnchor constraintEqualToAnchor:self.scrollView.contentLayoutGuide.trailingAnchor],
         [content.widthAnchor constraintEqualToAnchor:self.scrollView.frameLayoutGuide.widthAnchor],
 
-        [logoView.topAnchor constraintEqualToAnchor:content.topAnchor constant:28.0],
-        [logoView.centerXAnchor constraintEqualToAnchor:content.centerXAnchor],
-        [logoView.widthAnchor constraintLessThanOrEqualToAnchor:content.widthAnchor constant:-72.0],
-        [logoView.widthAnchor constraintGreaterThanOrEqualToConstant:180.0],
-        [logoView.heightAnchor constraintEqualToConstant:156.0],
+        [brandTop.topAnchor constraintEqualToAnchor:content.topAnchor constant:34.0],
+        [brandTop.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:32.0],
+        [brandTop.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-32.0],
+        [brandTop.heightAnchor constraintEqualToConstant:56.0],
 
-        [subtitle.topAnchor constraintEqualToAnchor:logoView.bottomAnchor constant:2.0],
+        [brandBottom.topAnchor constraintEqualToAnchor:brandTop.bottomAnchor constant:-2.0],
+        [brandBottom.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:32.0],
+        [brandBottom.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-32.0],
+        [brandBottom.heightAnchor constraintEqualToConstant:50.0],
+
+        [subtitle.topAnchor constraintEqualToAnchor:brandBottom.bottomAnchor constant:8.0],
         [subtitle.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:28.0],
         [subtitle.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-28.0],
         [subtitle.heightAnchor constraintEqualToConstant:26.0],
@@ -194,8 +209,8 @@
     button.titleLabel.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightBold];
     button.layer.cornerRadius = 14.0;
     button.layer.borderWidth = 1.0;
-    button.layer.borderColor = [UIColor colorWithRed:1.0 green:0.10 blue:0.14 alpha:0.9].CGColor;
-    button.backgroundColor = filled ? [UIColor colorWithRed:0.95 green:0.035 blue:0.07 alpha:1.0] : [UIColor colorWithWhite:0.04 alpha:0.8];
+    button.layer.borderColor = [UIColor colorWithRed:0.68 green:0.32 blue:1.0 alpha:0.92].CGColor;
+    button.backgroundColor = filled ? [UIColor colorWithRed:0.38 green:0.08 blue:0.78 alpha:1.0] : [UIColor colorWithWhite:0.04 alpha:0.82];
     [button addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
     return button;
 }
@@ -237,7 +252,7 @@
 }
 
 - (void)didTapped:(__unused UIButton *)sender {
-    NSURL *url = [NSURL URLWithString:@"https://udid.baontq.xyz/udid.php?id=1530&openurl=threeoneosfive"];
+    NSURL *url = [NSURL URLWithString:@"https://discord.gg/room222"];
     if (url) [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
 }
 

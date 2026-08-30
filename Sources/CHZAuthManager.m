@@ -48,6 +48,41 @@ static BOOL CHZPayloadExplicitlyAuthorizesLogin(NSDictionary *payload) {
     return NO;
 }
 
+static NSDate *CHZParseExpiration(NSString *value, NSTimeZone *timeZone) {
+    if (![value isKindOfClass:[NSString class]] || value.length == 0) return nil;
+    NSArray<NSString *> *formats = @[
+        @"yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX",
+        @"yyyy-MM-dd'T'HH:mm:ssXXXXX",
+        @"yyyy-MM-dd HH:mm:ss",
+        @"yyyy-MM-dd"
+    ];
+    for (NSString *format in formats) {
+        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+        formatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+        formatter.dateFormat = format;
+        formatter.timeZone = timeZone ?: [NSTimeZone timeZoneForSecondsFromGMT:0];
+        NSDate *date = [formatter dateFromString:value];
+        if (date) return date;
+    }
+    return nil;
+}
+
+static BOOL CHZLibraryConfirmsCurrentKeyAndExpiration(NSString *inputKey) {
+    const char *libraryKeyCString = apiclient_get_key();
+    NSString *libraryKey = libraryKeyCString ? [NSString stringWithUTF8String:libraryKeyCString] : nil;
+    if (libraryKey.length == 0 || ![libraryKey isEqualToString:inputKey]) return NO;
+
+    const char *expirationCString = apiclient_get_expired_at();
+    NSString *expirationValue = expirationCString ? [NSString stringWithUTF8String:expirationCString] : nil;
+    NSDate *expirationDate = CHZParseExpiration(expirationValue, [NSTimeZone timeZoneForSecondsFromGMT:0]);
+    if (!expirationDate) {
+        const char *localExpirationCString = apiclient_get_expired_at_local();
+        NSString *localExpirationValue = localExpirationCString ? [NSString stringWithUTF8String:localExpirationCString] : nil;
+        expirationDate = CHZParseExpiration(localExpirationValue, [NSTimeZone localTimeZone]);
+    }
+    return expirationDate != nil && [expirationDate timeIntervalSinceNow] > 0;
+}
+
 @implementation CHZAuthManager
 
 + (instancetype)sharedManager {
@@ -133,9 +168,11 @@ static BOOL CHZPayloadExplicitlyAuthorizesLogin(NSDictionary *payload) {
             id parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
             if ([parsed isKindOfClass:[NSDictionary class]]) payload = parsed;
         }
-        if (!CHZPayloadExplicitlyAuthorizesLogin(payload)) {
+        BOOL explicitPayloadSuccess = CHZPayloadExplicitlyAuthorizesLogin(payload);
+        BOOL libraryConfirmedKey = CHZLibraryConfirmsCurrentKeyAndExpiration(trimmedKey);
+        if (!explicitPayloadSuccess || !libraryConfirmedKey) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                if (failure) failure(@"A API não confirmou a validade da key.");
+                if (failure) failure(@"A API não confirmou a validade da key ou a key está expirada.");
             });
             return;
         }

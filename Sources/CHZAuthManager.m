@@ -12,13 +12,39 @@ static BOOL CHZAuthMessageIndicatesExpiredKey(NSString *message) {
     if (![message isKindOfClass:[NSString class]]) return NO;
     NSString *normalized = [message lowercaseString];
     NSArray<NSString *> *markers = @[
-        @"expired", @"expire", @"expiration", @"expirad", @"expiradа",
+        @"expired", @"expire", @"expiration", @"expirad",
         @"invalid key", @"key inválida", @"key invalida", @"key refused",
         @"revoked", @"revogada", @"disabled", @"desativada", @"inactive", @"inativa"
     ];
     for (NSString *marker in markers) {
         if ([normalized containsString:marker]) return YES;
     }
+    return NO;
+}
+
+static BOOL CHZPayloadExplicitlyAuthorizesLogin(NSDictionary *payload) {
+    if (![payload isKindOfClass:[NSDictionary class]]) return NO;
+
+    NSArray<NSString *> *booleanKeys = @[@"success", @"ok", @"valid", @"authorized", @"active"];
+    for (NSString *key in booleanKeys) {
+        id value = payload[key];
+        if ([value isKindOfClass:[NSNumber class]]) return [value boolValue];
+    }
+
+    id status = payload[@"status"] ?: payload[@"result"];
+    if ([status isKindOfClass:[NSString class]]) {
+        NSString *normalized = [status lowercaseString];
+        NSArray<NSString *> *positive = @[@"success", @"successful", @"ok", @"valid", @"authorized", @"active", @"approved"];
+        for (NSString *value in positive) {
+            if ([normalized isEqualToString:value]) return YES;
+        }
+        return NO;
+    }
+
+    id code = payload[@"code"];
+    if ([code isKindOfClass:[NSNumber class]]) return [code integerValue] == 200;
+    if ([code isKindOfClass:[NSString class]]) return [code isEqualToString:@"200"];
+
     return NO;
 }
 
@@ -107,9 +133,9 @@ static BOOL CHZAuthMessageIndicatesExpiredKey(NSString *message) {
             id parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
             if ([parsed isKindOfClass:[NSDictionary class]]) payload = parsed;
         }
-        if (json != NULL && payload == nil) {
+        if (!CHZPayloadExplicitlyAuthorizesLogin(payload)) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                if (failure) failure(@"Resposta inválida da API.");
+                if (failure) failure(@"A API não confirmou a validade da key.");
             });
             return;
         }

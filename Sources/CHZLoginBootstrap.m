@@ -1,8 +1,11 @@
 #import <UIKit/UIKit.h>
 #import "CHZLoginViewController.h"
+#import "CHZAuthManager.h"
 
 static BOOL CHZLoginPresentationInProgress = NO;
 static BOOL CHZLoginAlreadyPresented = NO;
+static BOOL CHZLoginAuthorized = NO;
+static BOOL CHZSavedKeyCheckInProgress = NO;
 static BOOL CHZBootstrapWasInstalled = NO;
 
 static UIWindow *CHZFindWindow(void) {
@@ -49,12 +52,28 @@ static UIViewController *CHZTopViewController(UIViewController *controller) {
 }
 
 static void CHZSchedulePresentation(void);
+static void CHZPresentLoginWhenReady(void);
+
+static void CHZValidateSavedKeyThenPresentIfNeeded(void) {
+    if (CHZLoginAuthorized || CHZSavedKeyCheckInProgress) return;
+    CHZSavedKeyCheckInProgress = YES;
+
+    [[CHZAuthManager sharedManager]
+        validateSavedKeyWithSuccess:^{
+            CHZSavedKeyCheckInProgress = NO;
+            CHZLoginAuthorized = YES;
+        }
+        failure:^(__unused NSString *message) {
+            CHZSavedKeyCheckInProgress = NO;
+            CHZPresentLoginWhenReady();
+        }];
+}
 
 static void CHZPresentLoginWhenReady(void) {
-    if (CHZLoginAlreadyPresented || CHZLoginPresentationInProgress) return;
+    if (CHZLoginAuthorized || CHZLoginAlreadyPresented || CHZLoginPresentationInProgress) return;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (CHZLoginAlreadyPresented || CHZLoginPresentationInProgress) return;
+        if (CHZLoginAuthorized || CHZLoginAlreadyPresented || CHZLoginPresentationInProgress) return;
 
         UIApplication *application = [UIApplication sharedApplication];
         if (application.applicationState != UIApplicationStateActive) {
@@ -119,7 +138,7 @@ static void CHZInstallLoginBootstrap(void) {
             CHZPresentLoginWhenReady();
         }];
 
-        CHZPresentLoginWhenReady();
+        CHZValidateSavedKeyThenPresentIfNeeded();
     });
 }
 

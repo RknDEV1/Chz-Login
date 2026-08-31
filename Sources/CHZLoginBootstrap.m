@@ -70,10 +70,10 @@ static void CHZValidateSavedKeyThenPresentIfNeeded(void) {
 }
 
 static void CHZPresentLoginWhenReady(void) {
-    if (CHZLoginAuthorized || CHZLoginAlreadyPresented || CHZLoginPresentationInProgress) return;
+    if (CHZLoginAuthorized || CHZLoginAlreadyPresented || CHZLoginPresentationInProgress || CHZSavedKeyCheckInProgress) return;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (CHZLoginAuthorized || CHZLoginAlreadyPresented || CHZLoginPresentationInProgress) return;
+        if (CHZLoginAuthorized || CHZLoginAlreadyPresented || CHZLoginPresentationInProgress || CHZSavedKeyCheckInProgress) return;
 
         UIApplication *application = [UIApplication sharedApplication];
         if (application.applicationState != UIApplicationStateActive) {
@@ -110,7 +110,7 @@ static void CHZPresentLoginWhenReady(void) {
 }
 
 static void CHZSchedulePresentation(void) {
-    if (CHZLoginAlreadyPresented) return;
+    if (CHZLoginAuthorized || CHZLoginAlreadyPresented || CHZSavedKeyCheckInProgress) return;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         CHZPresentLoginWhenReady();
     });
@@ -138,6 +138,8 @@ static void CHZInstallLoginBootstrap(void) {
             CHZPresentLoginWhenReady();
         }];
 
+        // Primeiro reutilizar e validar a key salva; só apresentar o login
+        // quando não houver key ou quando a API rejeitar/expirar a key.
         CHZValidateSavedKeyThenPresentIfNeeded();
     });
 }

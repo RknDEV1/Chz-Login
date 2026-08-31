@@ -67,6 +67,15 @@ static void CHZValidateSavedKeyThenPresentIfNeeded(void) {
             CHZSavedKeyCheckInProgress = NO;
             CHZPresentLoginWhenReady();
         }];
+
+    // Fallback: uma falha de rede ou callback ausente nunca pode esconder
+    // permanentemente a tela. O app continua bloqueado e mostra o login.
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (!CHZLoginAuthorized && CHZSavedKeyCheckInProgress) {
+            CHZSavedKeyCheckInProgress = NO;
+            CHZPresentLoginWhenReady();
+        }
+    });
 }
 
 static void CHZPresentLoginWhenReady(void) {

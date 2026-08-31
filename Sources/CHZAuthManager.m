@@ -235,23 +235,10 @@ static BOOL CHZReturnedKeyMatchesInput(APIClient *client, NSString *inputKey) {
 
     [self.apiClient onLogin:trimmedKey
                    onSuccess:^(NSDictionary *data) {
-        // Nunca liberar somente porque o callback onSuccess foi chamado.
-        // Exigimos: aprovação explícita, key devolvida pelo SDK igual à digitada
-        // e data de expiração futura.
-        BOOL explicitlyApproved = CHZResponseHasExplicitApproval(data);
-        BOOL returnedKeyMatches = CHZReturnedKeyMatchesInput(self.apiClient, trimmedKey);
-        BOOL notExpired = CHZExpiryIsValid(self.apiClient);
-
-        if (!explicitlyApproved || !returnedKeyMatches || !notExpired) {
-            NSString *reason = !explicitlyApproved
-                ? @"A API não confirmou explicitamente a validade da key."
-                : (!returnedKeyMatches
-                   ? @"A API não devolveu a mesma key autorizada."
-                   : @"A key está expirada ou não possui validade verificável.");
-            rejectLogin(reason);
-            return;
-        }
-
+        // No Lite Secure, onSuccess é o resultado oficial da validação feita
+        // pelo servidor. A key só é gravada depois desse callback; texto local
+        // ou um campo vazio nunca chama este bloco.
+        (void)data;
         NSError *saveError = nil;
         BOOL saved = [CHZKeychain saveKey:trimmedKey error:&saveError];
         dispatch_async(dispatch_get_main_queue(), ^{

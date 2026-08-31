@@ -5,6 +5,7 @@
 @property (nonatomic, strong) UITextField *keyField;
 @property (nonatomic, strong) UIButton *loginButton;
 @property (nonatomic, strong) UIActivityIndicatorView *indicator;
+@property (nonatomic, strong) UILabel *statusLabel;
 @property (nonatomic, strong) CAGradientLayer *backgroundGradient;
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIView *cardView;
@@ -120,8 +121,22 @@
     self.keyField.leftViewMode = UITextFieldViewModeAlways;
     [self.cardView addSubview:self.keyField];
 
+    self.statusLabel = [[UILabel alloc] init];
+    self.statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.statusLabel.text = @"Aguardando sua key…";
+    self.statusLabel.textColor = [UIColor colorWithWhite:0.58 alpha:1.0];
+    self.statusLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightMedium];
+    self.statusLabel.textAlignment = NSTextAlignmentCenter;
+    self.statusLabel.numberOfLines = 2;
+    [self.cardView addSubview:self.statusLabel];
+
     UIButton *didButton = [self buttonWithTitle:@"OBTER DID" action:@selector(didTapped:) filled:NO];
     self.loginButton = [self buttonWithTitle:@"ENTRAR" action:@selector(loginTapped:) filled:YES];
+    self.indicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
+    self.indicator.translatesAutoresizingMaskIntoConstraints = NO;
+    self.indicator.color = [UIColor whiteColor];
+    self.indicator.hidesWhenStopped = YES;
+    [self.loginButton addSubview:self.indicator];
     UIButton *storeButton = [self buttonWithTitle:@"LOJA" action:@selector(storeTapped:) filled:NO];
     UIButton *supportButton = [self buttonWithTitle:@"SUPORTE" action:@selector(supportTapped:) filled:NO];
     [self.cardView addSubview:didButton];
@@ -165,7 +180,7 @@
         [self.cardView.topAnchor constraintEqualToAnchor:subtitle.bottomAnchor constant:24.0],
         [self.cardView.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:24.0],
         [self.cardView.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-24.0],
-        [self.cardView.heightAnchor constraintEqualToConstant:354.0],
+        [self.cardView.heightAnchor constraintEqualToConstant:392.0],
 
         [fieldLabel.topAnchor constraintEqualToAnchor:self.cardView.topAnchor constant:28.0],
         [fieldLabel.leadingAnchor constraintEqualToAnchor:self.cardView.leadingAnchor constant:24.0],
@@ -177,7 +192,12 @@
         [self.keyField.trailingAnchor constraintEqualToAnchor:self.cardView.trailingAnchor constant:-24.0],
         [self.keyField.heightAnchor constraintEqualToConstant:56.0],
 
-        [didButton.topAnchor constraintEqualToAnchor:self.keyField.bottomAnchor constant:18.0],
+        [self.statusLabel.topAnchor constraintEqualToAnchor:self.keyField.bottomAnchor constant:8.0],
+        [self.statusLabel.leadingAnchor constraintEqualToAnchor:self.cardView.leadingAnchor constant:24.0],
+        [self.statusLabel.trailingAnchor constraintEqualToAnchor:self.cardView.trailingAnchor constant:-24.0],
+        [self.statusLabel.heightAnchor constraintEqualToConstant:30.0],
+
+        [didButton.topAnchor constraintEqualToAnchor:self.statusLabel.bottomAnchor constant:10.0],
         [didButton.leadingAnchor constraintEqualToAnchor:self.cardView.leadingAnchor constant:24.0],
         [didButton.trailingAnchor constraintEqualToAnchor:self.cardView.trailingAnchor constant:-24.0],
         [didButton.heightAnchor constraintEqualToConstant:50.0],
@@ -186,6 +206,8 @@
         [self.loginButton.leadingAnchor constraintEqualToAnchor:self.cardView.leadingAnchor constant:24.0],
         [self.loginButton.trailingAnchor constraintEqualToAnchor:self.cardView.trailingAnchor constant:-24.0],
         [self.loginButton.heightAnchor constraintEqualToConstant:56.0],
+        [self.indicator.centerYAnchor constraintEqualToAnchor:self.loginButton.centerYAnchor],
+        [self.indicator.trailingAnchor constraintEqualToAnchor:self.loginButton.trailingAnchor constant:-18.0],
 
         [links.topAnchor constraintEqualToAnchor:self.cardView.bottomAnchor constant:18.0],
         [links.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:24.0],
@@ -230,13 +252,25 @@
     }
 
     sender.enabled = NO;
+    self.keyField.enabled = NO;
+    self.statusLabel.text = @"Validando sua key com o painel…";
+    self.statusLabel.textColor = [UIColor colorWithRed:0.78 green:0.66 blue:1.0 alpha:1.0];
+    [self.indicator startAnimating];
+
     [[CHZAuthManager sharedManager] loginWithKey:key success:^{
         dispatch_async(dispatch_get_main_queue(), ^{
+            [self.indicator stopAnimating];
+            self.statusLabel.text = @"Key aprovada. Entrando…";
+            self.statusLabel.textColor = [UIColor colorWithRed:0.42 green:1.0 blue:0.68 alpha:1.0];
             sender.enabled = YES;
             [self finishLogin];
         });
     } failure:^(NSString *message) {
         dispatch_async(dispatch_get_main_queue(), ^{
+            [self.indicator stopAnimating];
+            self.keyField.enabled = YES;
+            self.statusLabel.text = @"Key recusada pela API.";
+            self.statusLabel.textColor = [UIColor colorWithRed:1.0 green:0.40 blue:0.48 alpha:1.0];
             sender.enabled = YES;
             NSString *safeMessage = ([message isKindOfClass:[NSString class]] && message.length > 0) ? message : @"Não foi possível validar a key. Verifique a conexão e tente novamente.";
             UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Login não autorizado" message:safeMessage preferredStyle:UIAlertControllerStyleAlert];

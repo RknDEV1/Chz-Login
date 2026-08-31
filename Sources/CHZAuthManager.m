@@ -23,6 +23,23 @@ static NSString *CHZMessageFromDictionary(NSDictionary *dictionary) {
     return nil;
 }
 
+static BOOL CHZMessageIndicatesNetworkFailure(NSString *message) {
+    if (![message isKindOfClass:[NSString class]]) return NO;
+
+    NSString *normalized = [[message lowercaseString]
+        stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    NSArray<NSString *> *markers = @[
+        @"network", @"connection", @"conexão", @"timeout", @"timed out",
+        @"offline", @"internet", @"unreachable", @"dns", @"host",
+        @"server unavailable", @"service unavailable", @"not connected"
+    ];
+
+    for (NSString *marker in markers) {
+        if ([normalized containsString:marker]) return YES;
+    }
+    return NO;
+}
+
 static BOOL CHZMessageIndicatesExpiredKey(NSString *message) {
     if (![message isKindOfClass:[NSString class]]) return NO;
 
@@ -223,11 +240,13 @@ static BOOL CHZReturnedKeyMatchesInput(APIClient *client, NSString *inputKey) {
         return;
     }
 
-    void (^rejectLogin)(NSString *) = ^(NSString *message) {
+    void (^rejectLogin)(NSString *, BOOL) = ^(NSString *message, BOOL transientNetworkError) {
         NSString *safeMessage = message.length > 0 ? message : @"A API não autorizou esta key.";
-        // Qualquer rejeição invalida a credencial persistida. Isso cobre key
-        // expirada, revogada, excluída no painel, inválida ou não encontrada.
-        [CHZKeychain deleteKey:nil];
+        // Falha de rede não prova que a key é inválida. Preserve a credencial
+        // para permitir uma nova tentativa quando o painel voltar.
+        if (!transientNetworkError) {
+            [CHZKeychain deleteKey:nil];
+        }
         dispatch_async(dispatch_get_main_queue(), ^{
             if (failure) failure(safeMessage);
         });
@@ -250,7 +269,8 @@ static BOOL CHZReturnedKeyMatchesInput(APIClient *client, NSString *inputKey) {
         });
     }
                    onFailure:^(NSDictionary *error) {
-        rejectLogin(CHZMessageFromDictionary(error) ?: @"Key recusada pela API.");
+        NSString *message = CHZMessageFromDictionary(error) ?: @"Key recusada pela API.";
+        rejectLogin(message, CHZMessageIndicatesNetworkFailure(message));
     }];
 }
 

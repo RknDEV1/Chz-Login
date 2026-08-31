@@ -54,6 +54,16 @@ static UIViewController *CHZTopViewController(UIViewController *controller) {
 static void CHZSchedulePresentation(void);
 static void CHZPresentLoginWhenReady(void);
 
+static BOOL CHZFirstLaunchAfterInstall(void) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *marker = [defaults stringForKey:@"com.room.injection.login-install-marker"];
+    if (marker.length > 0) return NO;
+
+    [defaults setObject:@"installed" forKey:@"com.room.injection.login-install-marker"];
+    [defaults synchronize];
+    return YES;
+}
+
 static void CHZValidateSavedKeyThenPresentIfNeeded(void) {
     if (CHZLoginAuthorized || CHZSavedKeyCheckInProgress) return;
     CHZSavedKeyCheckInProgress = YES;
@@ -147,9 +157,16 @@ static void CHZInstallLoginBootstrap(void) {
             CHZPresentLoginWhenReady();
         }];
 
-        // Primeiro reutilizar e validar a key salva; só apresentar o login
-        // quando não houver key ou quando a API rejeitar/expirar a key.
-        CHZValidateSavedKeyThenPresentIfNeeded();
+        // O Keychain pode sobreviver à exclusão da IPA. No primeiro
+        // lançamento após uma instalação nova, descartar a credencial antiga
+        // e exigir uma key nova.
+        if (CHZFirstLaunchAfterInstall()) {
+            [[CHZAuthManager sharedManager] clearSavedKey];
+            CHZPresentLoginWhenReady();
+        } else {
+            // Nos lançamentos normais, reutilizar e validar a key salva.
+            CHZValidateSavedKeyThenPresentIfNeeded();
+        }
     });
 }
 

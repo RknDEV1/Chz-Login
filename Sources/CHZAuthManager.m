@@ -225,9 +225,9 @@ static BOOL CHZReturnedKeyMatchesInput(APIClient *client, NSString *inputKey) {
 
     void (^rejectLogin)(NSString *) = ^(NSString *message) {
         NSString *safeMessage = message.length > 0 ? message : @"A API não autorizou esta key.";
-        if (CHZMessageIndicatesExpiredKey(safeMessage)) {
-            [CHZKeychain deleteKey:nil];
-        }
+        // Qualquer rejeição invalida a credencial persistida. Isso cobre key
+        // expirada, revogada, excluída no painel, inválida ou não encontrada.
+        [CHZKeychain deleteKey:nil];
         dispatch_async(dispatch_get_main_queue(), ^{
             if (failure) failure(safeMessage);
         });

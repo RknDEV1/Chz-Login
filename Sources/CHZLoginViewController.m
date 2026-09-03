@@ -52,19 +52,22 @@
 }
 
 - (void)buildInterface {
-    UIView *glowTop = [[UIView alloc] init];
-    glowTop.translatesAutoresizingMaskIntoConstraints = NO;
+    // Stable layout: this screen intentionally avoids Auto Layout so it cannot
+    // abort on an iOS version with stricter constraint validation.
+    self.view.backgroundColor = [UIColor colorWithRed:0.008 green:0.006 blue:0.009 alpha:1.0];
+
+    UIView *glowTop = [[UIView alloc] initWithFrame:CGRectMake(-40, -120, 320, 320)];
     glowTop.backgroundColor = [self chzRed];
     glowTop.alpha = 0.075;
-    glowTop.layer.cornerRadius = 150.0;
+    glowTop.layer.cornerRadius = 160.0;
     glowTop.layer.shadowColor = [self chzRed].CGColor;
     glowTop.layer.shadowOpacity = 0.55;
     glowTop.layer.shadowRadius = 90.0;
     glowTop.layer.shadowOffset = CGSizeZero;
+    glowTop.userInteractionEnabled = NO;
     [self.view addSubview:glowTop];
 
-    UIView *glowBottom = [[UIView alloc] init];
-    glowBottom.translatesAutoresizingMaskIntoConstraints = NO;
+    UIView *glowBottom = [[UIView alloc] initWithFrame:CGRectZero];
     glowBottom.backgroundColor = [self chzRed];
     glowBottom.alpha = 0.045;
     glowBottom.layer.cornerRadius = 140.0;
@@ -72,42 +75,21 @@
     glowBottom.layer.shadowOpacity = 0.5;
     glowBottom.layer.shadowRadius = 90.0;
     glowBottom.layer.shadowOffset = CGSizeZero;
+    glowBottom.userInteractionEnabled = NO;
     [self.view addSubview:glowBottom];
 
-    [NSLayoutConstraint activateConstraints:@[
-        [glowTop.widthAnchor constraintEqualToConstant:300.0], [glowTop.heightAnchor constraintEqualToConstant:300.0],
-        [glowTop.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor], [glowTop.topAnchor constraintEqualToAnchor:self.view.topAnchor constant:-185.0],
-        [glowBottom.widthAnchor constraintEqualToConstant:280.0], [glowBottom.heightAnchor constraintEqualToConstant:280.0],
-        [glowBottom.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor], [glowBottom.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor constant:170.0]
-    ]];
+    UIVisualEffectView *card = [self chzGlassView];
+    card.tag = 310501;
+    card.layer.cornerRadius = 30.0;
+    card.layer.borderWidth = 1.0;
+    card.layer.borderColor = [self chzRedSoft].CGColor;
+    card.layer.shadowColor = [self chzRed].CGColor;
+    card.layer.shadowOpacity = 0.12;
+    card.layer.shadowRadius = 28.0;
+    card.layer.shadowOffset = CGSizeZero;
+    [self.view addSubview:card];
 
-    UIScrollView *scroll = [[UIScrollView alloc] init];
-    scroll.translatesAutoresizingMaskIntoConstraints = NO;
-    scroll.showsVerticalScrollIndicator = NO;
-    scroll.alwaysBounceVertical = NO;
-    scroll.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentAlways;
-    [self.view addSubview:scroll];
-    [NSLayoutConstraint activateConstraints:@[
-        [scroll.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
-        [scroll.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
-        [scroll.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:8.0],
-        [scroll.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-8.0]
-    ]];
-
-    UIView *content = [[UIView alloc] init];
-    content.translatesAutoresizingMaskIntoConstraints = NO;
-    [scroll addSubview:content];
-    [NSLayoutConstraint activateConstraints:@[
-        [content.leadingAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.leadingAnchor constant:24.0],
-        [content.trailingAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.trailingAnchor constant:-24.0],
-        [content.topAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.topAnchor constant:8.0],
-        [content.bottomAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.bottomAnchor constant:-8.0],
-        [content.widthAnchor constraintEqualToAnchor:scroll.frameLayoutGuide.widthAnchor constant:-48.0]
-    ]];
-
-    // Transparent wordmark: no square PNG behind CHZ PRIV.
-    UILabel *chz = [[UILabel alloc] init];
-    chz.translatesAutoresizingMaskIntoConstraints = NO;
+    UILabel *chz = [[UILabel alloc] initWithFrame:CGRectZero];
     chz.text = @"CHZ";
     chz.textColor = [self chzRed];
     chz.font = [UIFont systemFontOfSize:45.0 weight:UIFontWeightBlack];
@@ -116,9 +98,9 @@
     chz.layer.shadowOpacity = 0.28;
     chz.layer.shadowRadius = 12.0;
     chz.layer.shadowOffset = CGSizeZero;
+    [self.view addSubview:chz];
 
-    UILabel *priv = [[UILabel alloc] init];
-    priv.translatesAutoresizingMaskIntoConstraints = NO;
+    UILabel *priv = [[UILabel alloc] initWithFrame:CGRectZero];
     priv.text = @"PRIV";
     priv.textColor = UIColor.whiteColor;
     priv.font = [UIFont systemFontOfSize:45.0 weight:UIFontWeightBlack];
@@ -127,43 +109,22 @@
     priv.layer.shadowOpacity = 0.55;
     priv.layer.shadowRadius = 8.0;
     priv.layer.shadowOffset = CGSizeMake(0, 3);
+    [self.view addSubview:priv];
 
-    UIStackView *wordmark = [[UIStackView alloc] initWithArrangedSubviews:@[chz, priv]];
-    wordmark.translatesAutoresizingMaskIntoConstraints = NO;
-    wordmark.axis = UILayoutConstraintAxisHorizontal;
-    wordmark.alignment = UIStackViewAlignmentCenter;
-    wordmark.spacing = 7.0;
-
-    UILabel *subtitle = [[UILabel alloc] init];
-    subtitle.translatesAutoresizingMaskIntoConstraints = NO;
+    UILabel *subtitle = [[UILabel alloc] initWithFrame:CGRectZero];
     subtitle.text = @"Acesse sua conta";
     subtitle.textColor = [UIColor colorWithWhite:0.80 alpha:1.0];
     subtitle.font = [UIFont systemFontOfSize:17.0 weight:UIFontWeightMedium];
     subtitle.textAlignment = NSTextAlignmentCenter;
+    [self.view addSubview:subtitle];
 
-    UIVisualEffectView *card = [self chzGlassView];
-    card.translatesAutoresizingMaskIntoConstraints = NO;
-    card.layer.cornerRadius = 30.0;
-    card.layer.borderWidth = 1.0;
-    card.layer.borderColor = [self chzRedSoft].CGColor;
-    card.layer.shadowColor = [self chzRed].CGColor;
-    card.layer.shadowOpacity = 0.12;
-    card.layer.shadowRadius = 28.0;
-    card.layer.shadowOffset = CGSizeZero;
-    [content addSubview:card];
-
-    UIView *cardContent = [[UIView alloc] init];
-    cardContent.translatesAutoresizingMaskIntoConstraints = NO;
-    [card.contentView addSubview:cardContent];
-
-    UILabel *label = [[UILabel alloc] init];
-    label.translatesAutoresizingMaskIntoConstraints = NO;
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
     label.text = @"KEY DE ACESSO";
     label.textColor = UIColor.whiteColor;
     label.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightBold];
+    [card.contentView addSubview:label];
 
-    self.keyField = [[UITextField alloc] init];
-    self.keyField.translatesAutoresizingMaskIntoConstraints = NO;
+    self.keyField = [[UITextField alloc] initWithFrame:CGRectZero];
     self.keyField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:@"Digite sua key" attributes:@{NSForegroundColorAttributeName: [UIColor colorWithWhite:0.52 alpha:1.0]}];
     self.keyField.textColor = UIColor.whiteColor;
     self.keyField.font = [UIFont systemFontOfSize:18.0 weight:UIFontWeightMedium];
@@ -178,59 +139,107 @@
     self.keyField.delegate = self;
     self.keyField.leftView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 16, 1)];
     self.keyField.leftViewMode = UITextFieldViewModeAlways;
+    [card.contentView addSubview:self.keyField];
 
     self.didButton = [self buttonWithTitle:@"OBTER DID" action:@selector(didTapped:) filled:NO];
     self.loginButton = [self buttonWithTitle:@"ENTRAR" action:@selector(loginTapped:) filled:YES];
-
-    UIStackView *form = [[UIStackView alloc] initWithArrangedSubviews:@[label, self.keyField, self.didButton, self.loginButton]];
-    form.translatesAutoresizingMaskIntoConstraints = NO;
-    form.axis = UILayoutConstraintAxisVertical;
-    form.spacing = 14.0;
-    [cardContent addSubview:form];
+    [card.contentView addSubview:self.didButton];
+    [card.contentView addSubview:self.loginButton];
 
     UIButton *discordButton = [self iconButtonWithImage:[self chzDiscordImage] action:@selector(discordTapped:) accessibilityLabel:@"Discord"];
-    discordButton.translatesAutoresizingMaskIntoConstraints = NO;
-    UILabel *discordCaption = [[UILabel alloc] init];
-    discordCaption.translatesAutoresizingMaskIntoConstraints = NO;
+    UILabel *discordCaption = [[UILabel alloc] initWithFrame:CGRectZero];
     discordCaption.text = @"Discord";
     discordCaption.textColor = [UIColor colorWithWhite:0.72 alpha:1.0];
     discordCaption.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightSemibold];
     discordCaption.textAlignment = NSTextAlignmentCenter;
-    UIStackView *discordStack = [[UIStackView alloc] initWithArrangedSubviews:@[discordButton, discordCaption]];
-    discordStack.translatesAutoresizingMaskIntoConstraints = NO;
-    discordStack.axis = UILayoutConstraintAxisVertical;
-    discordStack.alignment = UIStackViewAlignmentCenter;
-    discordStack.spacing = 6.0;
-    [content addSubview:discordStack];
+    [self.view addSubview:discordButton];
+    [self.view addSubview:discordCaption];
 
-    [NSLayoutConstraint activateConstraints:@[
-        [wordmark.topAnchor constraintEqualToAnchor:content.topAnchor constant:8.0],
-        [wordmark.centerXAnchor constraintEqualToAnchor:content.centerXAnchor],
-        [wordmark.heightAnchor constraintEqualToConstant:58.0],
-        [subtitle.topAnchor constraintEqualToAnchor:wordmark.bottomAnchor constant:2.0],
-        [subtitle.leadingAnchor constraintEqualToAnchor:content.leadingAnchor],
-        [subtitle.trailingAnchor constraintEqualToAnchor:content.trailingAnchor],
-        [card.topAnchor constraintEqualToAnchor:subtitle.bottomAnchor constant:28.0],
-        [card.leadingAnchor constraintEqualToAnchor:content.leadingAnchor],
-        [card.trailingAnchor constraintEqualToAnchor:content.trailingAnchor],
-        [card.heightAnchor constraintEqualToConstant:430.0],
-        [cardContent.leadingAnchor constraintEqualToAnchor:card.contentView.leadingAnchor constant:26.0],
-        [cardContent.trailingAnchor constraintEqualToAnchor:card.contentView.trailingAnchor constant:-26.0],
-        [cardContent.topAnchor constraintEqualToAnchor:card.contentView.topAnchor constant:28.0],
-        [cardContent.bottomAnchor constraintEqualToAnchor:card.contentView.bottomAnchor constant:-28.0],
-        [form.leadingAnchor constraintEqualToAnchor:cardContent.leadingAnchor],
-        [form.trailingAnchor constraintEqualToAnchor:cardContent.trailingAnchor],
-        [form.topAnchor constraintEqualToAnchor:cardContent.topAnchor],
-        [form.bottomAnchor constraintLessThanOrEqualToAnchor:cardContent.bottomAnchor],
-        [self.keyField.heightAnchor constraintEqualToConstant:58.0],
-        [self.didButton.heightAnchor constraintEqualToConstant:58.0],
-        [self.loginButton.heightAnchor constraintEqualToConstant:58.0],
-        [discordStack.topAnchor constraintEqualToAnchor:card.bottomAnchor constant:20.0],
-        [discordStack.centerXAnchor constraintEqualToAnchor:content.centerXAnchor],
-        [discordStack.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-6.0],
-        [discordButton.widthAnchor constraintEqualToConstant:64.0],
-        [discordButton.heightAnchor constraintEqualToConstant:64.0]
-    ]];
+    // Keep references using tags for layout without adding more public state.
+    chz.tag = 310502;
+    priv.tag = 310503;
+    subtitle.tag = 310504;
+    label.tag = 310505;
+    discordButton.tag = 310506;
+    discordCaption.tag = 310507;
+    glowBottom.tag = 310508;
+
+    self.view.autoresizesSubviews = YES;
+    [self layoutStableInterface];
+}
+
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews];
+    [self layoutStableInterface];
+}
+
+- (void)layoutStableInterface {
+    UIView *root = self.view;
+    CGFloat W = CGRectGetWidth(root.bounds);
+    CGFloat H = CGRectGetHeight(root.bounds);
+    if (W <= 0 || H <= 0) return;
+
+    UIView *glowBottom = [root viewWithTag:310508];
+    glowBottom.frame = CGRectMake(W - 260.0, H - 80.0, 280.0, 280.0);
+
+    UILabel *chz = (UILabel *)[root viewWithTag:310502];
+    UILabel *priv = (UILabel *)[root viewWithTag:310503];
+    UILabel *subtitle = (UILabel *)[root viewWithTag:310504];
+    UILabel *label = (UILabel *)[[root viewWithTag:310501] viewWithTag:310505];
+    UIButton *discordButton = (UIButton *)[root viewWithTag:310506];
+    UILabel *discordCaption = (UILabel *)[root viewWithTag:310507];
+    UIVisualEffectView *card = (UIVisualEffectView *)[root viewWithTag:310501];
+
+    CGFloat safeTop = root.safeAreaInsets.top;
+    CGFloat safeBottom = root.safeAreaInsets.bottom;
+    CGFloat contentW = MIN(W - 40.0, 430.0);
+    CGFloat left = (W - contentW) * 0.5;
+
+    CGFloat wordY = safeTop + 4.0;
+    CGFloat wordH = 58.0;
+    CGFloat chzW = 88.0;
+    CGFloat privW = 112.0;
+    CGFloat gap = 7.0;
+    CGFloat totalW = chzW + gap + privW;
+    CGFloat wordX = (W - totalW) * 0.5;
+    chz.frame = CGRectMake(wordX, wordY, chzW, wordH);
+    priv.frame = CGRectMake(wordX + chzW + gap, wordY, privW, wordH);
+
+    CGFloat subtitleY = CGRectGetMaxY(chz.frame) - 1.0;
+    subtitle.frame = CGRectMake(left, subtitleY, contentW, 24.0);
+
+    CGFloat cardY = CGRectGetMaxY(subtitle.frame) + 22.0;
+    CGFloat cardH = 394.0;
+    if (H < 700.0) cardH = 374.0;
+    card.frame = CGRectMake(left, cardY, contentW, cardH);
+
+    CGFloat pad = 24.0;
+    CGFloat innerW = contentW - pad * 2.0;
+    CGFloat y = 24.0;
+    label.frame = CGRectMake(pad, y, innerW, 22.0);
+    y += 32.0;
+    self.keyField.frame = CGRectMake(pad, y, innerW, 56.0);
+    y += 70.0;
+    self.didButton.frame = CGRectMake(pad, y, innerW, 54.0);
+    y += 68.0;
+    self.loginButton.frame = CGRectMake(pad, y, innerW, 54.0);
+
+    CGFloat discordY = CGRectGetMaxY(card.frame) + 14.0;
+    discordButton.frame = CGRectMake((W - 58.0) * 0.5, discordY, 58.0, 58.0);
+    discordCaption.frame = CGRectMake((W - 100.0) * 0.5, discordY + 62.0, 100.0, 18.0);
+
+    // Keep the bottom controls inside the visible safe area on compact devices.
+    CGFloat maxBottom = H - safeBottom - 4.0;
+    if (CGRectGetMaxY(discordCaption.frame) > maxBottom) {
+        CGFloat shift = CGRectGetMaxY(discordCaption.frame) - maxBottom;
+        card.frame = CGRectOffset(card.frame, 0, -shift);
+        label.frame = CGRectOffset(label.frame, 0, -shift);
+        self.keyField.frame = CGRectOffset(self.keyField.frame, 0, -shift);
+        self.didButton.frame = CGRectOffset(self.didButton.frame, 0, -shift);
+        self.loginButton.frame = CGRectOffset(self.loginButton.frame, 0, -shift);
+        discordButton.frame = CGRectOffset(discordButton.frame, 0, -shift);
+        discordCaption.frame = CGRectOffset(discordCaption.frame, 0, -shift);
+    }
 }
 
 - (UIButton *)buttonWithTitle:(NSString *)title action:(SEL)action filled:(BOOL)filled {

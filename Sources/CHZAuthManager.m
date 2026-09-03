@@ -18,35 +18,49 @@
 - (instancetype)init {
     self = [super init];
     if (self) {
-        const char *token = [CHZ_API_TOKEN UTF8String];
-        if (token != NULL) {
-            apiclient_set_token(token);
+        APIClient *client = [APIClient sharedAPIClient];
+
+        if (CHZ_API_TOKEN.length > 0) {
+            [client setToken:CHZ_API_TOKEN];
         }
-        apiclient_set_language("en");
+
+        [client setLanguage:@"en"];
+
         NSString *udid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
         if (udid.length > 0) {
-            apiclient_set_udid(udid.UTF8String);
+            [client setUDID:udid];
         }
-        NSLog(@"[CHZLogin] UDID configurado: %@; tamanho: %lu", udid.length > 0 ? @"SIM" : @"NAO", (unsigned long)udid.length);
-        apiclient_hide_ui(true);
-        apiclient_silent_mode(true);
+
+        NSLog(@"[CHZLogin] UDID configurado: %@; tamanho: %lu",
+              udid.length > 0 ? @"SIM" : @"NAO",
+              (unsigned long)udid.length);
+
+        [client hideUI:YES];
+        [client silentMode:YES];
     }
     return self;
 }
 
-- (void)validateSavedKeyWithSuccess:(CHZAuthSuccess)success failure:(CHZAuthFailure)failure {
+- (void)validateSavedKeyWithSuccess:(CHZAuthSuccess)success
+                            failure:(CHZAuthFailure)failure {
     NSError *loadError = nil;
     NSString *savedKey = [CHZKeychain loadKey:&loadError];
+
     if (savedKey.length == 0) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            if (failure) failure(loadError.localizedDescription ?: @"Nenhuma key salva.");
+            if (failure) {
+                failure(loadError.localizedDescription ?: @"Nenhuma key salva.");
+            }
         });
         return;
     }
+
     [self loginWithKey:savedKey success:success failure:failure];
 }
 
-- (void)loginWithKey:(NSString *)key success:(CHZAuthSuccess)success failure:(CHZAuthFailure)failure {
+- (void)loginWithKey:(NSString *)key
+             success:(CHZAuthSuccess)success
+             failure:(CHZAuthFailure)failure {
     NSString *trimmedKey = [key isKindOfClass:[NSString class]]
         ? [key stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]]
         : @"";
@@ -58,56 +72,39 @@
         return;
     }
 
-    const char *input = [trimmedKey UTF8String];
-    if (input == NULL) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if (failure) failure(@"A key possui um formato inválido.");
-        });
-        return;
-    }
+    APIClient *client = [APIClient sharedAPIClient];
 
-    apiclient_dict_callback onSuccess = ^(const char *json) {
-        NSDictionary *payload = nil;
-        if (json != NULL) {
-            NSData *data = [NSData dataWithBytes:json length:strlen(json)];
-            id parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-            if ([parsed isKindOfClass:[NSDictionary class]]) payload = parsed;
-        }
-        if (json != NULL && payload == nil) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                if (failure) failure(@"Resposta inválida da API.");
-            });
-            return;
-        }
+    [client onLogin:trimmedKey
+          onSuccess:^(NSDictionary *data) {
         NSError *saveError = nil;
         BOOL saved = [CHZKeychain saveKey:trimmedKey error:&saveError];
+
         dispatch_async(dispatch_get_main_queue(), ^{
             if (!saved) {
-                if (failure) failure(saveError.localizedDescription ?: @"Não foi possível salvar a key.");
+                if (failure) {
+                    failure(saveError.localizedDescription ?: @"Não foi possível salvar a key.");
+                }
             } else if (success) {
                 success();
             }
         });
-    };
-
-    apiclient_dict_callback onFailure = ^(const char *json) {
-        NSLog(@"[CHZLogin] API login failure JSON: %s", json ?: "<null>");
+    }
+          onFailure:^(NSDictionary *error) {
         [CHZKeychain deleteKey:nil];
+
         NSString *message = @"Key recusada pela API.";
-        if (json != NULL) {
-            NSData *data = [NSData dataWithBytes:json length:strlen(json)];
-            id parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-            if ([parsed isKindOfClass:[NSDictionary class]]) {
-                id detail = parsed[@"message"] ?: parsed[@"error"] ?: parsed[@"msg"];
-                if ([detail isKindOfClass:[NSString class]] && [detail length] > 0) message = detail;
+
+        if ([error isKindOfClass:[NSDictionary class]]) {
+            id detail = error[@"message"] ?: error[@"error"] ?: error[@"msg"];
+            if ([detail isKindOfClass:[NSString class]] && [detail length] > 0) {
+                message = detail;
             }
         }
+
         dispatch_async(dispatch_get_main_queue(), ^{
             if (failure) failure(message);
         });
-    };
-
-    apiclient_on_login(input, onSuccess, onFailure);
+    }];
 }
 
 - (void)clearSavedKey {

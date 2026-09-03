@@ -53,7 +53,7 @@
     chz.tag = 7002;
     chz.text = @"CHZ";
     chz.textColor = [self chzRed];
-    chz.font = [UIFont italicSystemFontOfSize:48.0 weight:UIFontWeightBlack];
+    chz.font = [UIFont italicSystemFontOfSize:48.0];
     chz.textAlignment = NSTextAlignmentRight;
     [self.view addSubview:chz];
 
@@ -61,7 +61,7 @@
     priv.tag = 7003;
     priv.text = @"PRIV";
     priv.textColor = [self chzWhite];
-    priv.font = [UIFont italicSystemFontOfSize:48.0 weight:UIFontWeightBlack];
+    priv.font = [UIFont italicSystemFontOfSize:48.0];
     priv.textAlignment = NSTextAlignmentLeft;
     [self.view addSubview:priv];
 
@@ -243,7 +243,7 @@
     rightLine.frame = CGRectMake(W/2.0+74, supportY+11, MAX(0, W/2.0-122), 1);
     CGFloat icon = 50.0;
     discord.frame = CGRectMake((W-icon)/2.0, supportY+42, icon, icon);
-    discord.imageEdgeInsets = UIEdgeInsetsMake(11,11,11,11);
+    discord.imageView.contentMode = UIViewContentModeScaleAspectFit;
     (void)bottom;
     (void)gap;
 }

@@ -1,3 +1,9 @@
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
+#import <dispatch/dispatch.h>
+
+#import "CHZLoginViewController.h"
+#import "CHZAuthManager.h"
 // ... código atual do CHZLoginBootstrap.m ...
 
 __attribute__((constructor))

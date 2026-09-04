@@ -1,4 +1,4 @@
-name: Check CHZ PRIV
+name: Check
 
 on:
   workflow_dispatch:
@@ -14,11 +14,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Conferir arquivos do projeto
+        shell: bash
         run: |
+          set -euo pipefail
           test -f "Config/CHZSecrets.example.h"
           test -f "Sources/CHZAuthManager.m"
           test -f "Sources/CHZKeychain.m"
           test -f "Sources/CHZLoginViewController.m"
-          test -f "Vendor/LiteSecure/APIClient.h"
-          test -f "Vendor/LiteSecure/libAPIClient.a"
-          echo "Estrutura conferida."
+          test -f "Sources/CHZLoginBootstrap.m"
+          test -f "Vendor/API/APIClient.h"
+          test -f "Vendor/API/libAPIClient.a"
+          grep -q "__attribute__((constructor))" "Sources/CHZLoginBootstrap.m"
+          grep -q "CHZTryPresentLogin" "Sources/CHZLoginBootstrap.m"
+          echo "Estrutura e bootstrap conferidos."

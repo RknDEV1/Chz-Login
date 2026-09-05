@@ -27,6 +27,18 @@
     return [UIColor colorWithWhite:0.70 alpha:1.0];
 }
 
+- (UIImage *)chzImageNamed:(NSString *)name {
+    UIImage *image = [UIImage imageNamed:name];
+    if (image != nil) return image;
+
+    NSString *bundlePath = [[NSBundle mainBundle] pathForResource:@"CHZLoginResources" ofType:@"bundle"];
+    NSBundle *resourceBundle = bundlePath.length ? [NSBundle bundleWithPath:bundlePath] : nil;
+    if (resourceBundle != nil) {
+        image = [UIImage imageNamed:name inBundle:resourceBundle compatibleWithTraitCollection:nil];
+    }
+    return image;
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
 
@@ -116,7 +128,7 @@
     priv.textAlignment = NSTextAlignmentLeft;
     [self.view addSubview:priv];
 
-    self.logoView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"CHZPrivLogo"]];
+    self.logoView = [[UIImageView alloc] initWithImage:[self chzImageNamed:@"CHZPrivLogo"]];
     self.logoView.tag = 7016;
     self.logoView.contentMode = UIViewContentModeScaleAspectFit;
     self.logoView.accessibilityLabel = @"CHZ PRIV";
@@ -221,7 +233,7 @@
     discord.layer.shadowOpacity = 0.30;
     discord.layer.shadowRadius = 13.0;
     discord.layer.shadowOffset = CGSizeZero;
-    UIImage *discordImage = [UIImage imageNamed:@"discord"];
+    UIImage *discordImage = [self chzImageNamed:@"discord"];
     if (discordImage) {
         [discord setImage:[discordImage imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal] forState:UIControlStateNormal];
     } else {

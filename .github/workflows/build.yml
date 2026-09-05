@@ -87,6 +87,26 @@ jobs:
               -o "$object"
           done
 
+      - name: Empacotar assets da tela de login
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/CHZLoginResources.bundle
+          cp Resources/CHZPrivLogo.png build/CHZLoginResources.bundle/CHZPrivLogo.png
+          cp Resources/discord.png build/CHZLoginResources.bundle/discord.png
+          cat > build/CHZLoginResources.bundle/Info.plist <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>CFBundleIdentifier</key><string>com.chz.login.resources</string>
+          <key>CFBundleName</key><string>CHZLoginResources</string>
+          <key>CFBundlePackageType</key><string>BNDL</string>
+          </dict></plist>
+          PLIST
+          ditto -c -k --sequesterRsrc --keepParent build/CHZLoginResources.bundle build/CHZLoginResources.bundle.zip
+          test -s build/CHZLoginResources.bundle/CHZPrivLogo.png
+          test -s build/CHZLoginResources.bundle/discord.png
+
       - name: Compilar dylib arm64
         shell: bash
         run: |
@@ -126,4 +146,5 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "CHZLogin build ${GITHUB_RUN_NUMBER}" \
             --notes "Build gerado a partir do commit ${GITHUB_SHA}." \
-            build/CHZLogin.dylib
+            build/CHZLogin.dylib \
+            build/CHZLoginResources.bundle.zip

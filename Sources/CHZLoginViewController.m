@@ -6,6 +6,8 @@
 @property (nonatomic, strong) UITextField *keyField;
 @property (nonatomic, strong) UIButton *loginButton;
 @property (nonatomic, strong) UIButton *didButton;
+@property (nonatomic, strong) UIActivityIndicatorView *activityIndicator;
+@property (nonatomic, strong) UILabel *statusLabel;
 @property (nonatomic, strong) CAGradientLayer *topGradient;
 @property (nonatomic, strong) CAGradientLayer *bottomGradient;
 @end
@@ -167,6 +169,21 @@
     self.loginButton.tag = 7009;
     [card addSubview:self.loginButton];
 
+    self.activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
+    self.activityIndicator.tag = 7014;
+    self.activityIndicator.hidesWhenStopped = YES;
+    self.activityIndicator.color = UIColor.whiteColor;
+    [card addSubview:self.activityIndicator];
+
+    self.statusLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+    self.statusLabel.tag = 7015;
+    self.statusLabel.textColor = self.chzMutedWhite;
+    self.statusLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightMedium];
+    self.statusLabel.textAlignment = NSTextAlignmentCenter;
+    self.statusLabel.numberOfLines = 2;
+    self.statusLabel.accessibilityIdentifier = @"chz.login.status";
+    [card addSubview:self.statusLabel];
+
     UILabel *support = [[UILabel alloc] initWithFrame:CGRectZero];
     support.tag = 7010;
     support.text = @"SUPORTE";
@@ -251,12 +268,13 @@
     glow.layer.cornerRadius = glow.frame.size.height / 2.0;
 
     CGFloat logoY = safeTop + (tablet ? 54.0 : 42.0) * scale;
-    CGFloat logoW = MIN(W * (tablet ? 0.58 : 0.70), tablet ? 420.0 : 350.0);
-    CGFloat wordH = 58.0 * scale;
+    CGFloat logoW = MIN(W * (tablet ? 0.70 : 0.70), tablet ? 560.0 : 350.0);
+    CGFloat wordH = (tablet ? 86.0 : 58.0) * scale;
     UILabel *chz = (UILabel *)[self.view viewWithTag:7002];
     UILabel *priv = (UILabel *)[self.view viewWithTag:7003];
-    chz.font = [UIFont italicSystemFontOfSize:52.0 * scale];
-    priv.font = [UIFont italicSystemFontOfSize:52.0 * scale];
+    CGFloat wordSize = (tablet ? 76.0 : 52.0) * scale;
+    chz.font = [UIFont italicSystemFontOfSize:wordSize];
+    priv.font = [UIFont italicSystemFontOfSize:wordSize];
     chz.frame = CGRectMake((W - logoW) / 2.0, logoY, logoW * 0.49, wordH);
     priv.frame = CGRectMake(CGRectGetMidX(chz.frame) - 3.0 * scale, logoY, logoW * 0.53, wordH);
 
@@ -267,42 +285,48 @@
     CGFloat maxCardWidth = tablet ? 726.0 : 680.0;
     CGFloat sideInset = tablet ? 42.0 : 21.0;
     CGFloat cardW = MIN(W - 2.0 * sideInset, maxCardWidth);
-    CGFloat cardH = (compact ? 285.0 : 305.0) * scale;
-    CGFloat cardY = CGRectGetMaxY(subtitle.frame) + (compact ? 23.0 : 39.0) * scale;
+    CGFloat cardH = (tablet ? 560.0 : (compact ? 318.0 : 322.0)) * scale;
+    CGFloat cardY = CGRectGetMaxY(subtitle.frame) + (tablet ? 64.0 : (compact ? 23.0 : 39.0)) * scale;
     UIView *card = [self.view viewWithTag:7005];
     card.frame = CGRectMake((W - cardW) / 2.0, cardY, cardW, cardH);
 
-    CGFloat horizontalPadding = (compact ? 36.0 : 48.0) * scale;
+    CGFloat horizontalPadding = (tablet ? 48.0 : (compact ? 36.0 : 48.0)) * scale;
     CGFloat contentW = cardW - 2.0 * horizontalPadding;
-    CGFloat fieldH = 54.0 * scale;
+    CGFloat fieldH = (tablet ? 80.0 : 54.0) * scale;
     UILabel *label = (UILabel *)[card viewWithTag:7006];
     label.font = [UIFont systemFontOfSize:15.0 * scale weight:UIFontWeightBold];
-    label.frame = CGRectMake(horizontalPadding, 31.0 * scale, contentW, 24.0 * scale);
+    label.frame = CGRectMake(horizontalPadding, (tablet ? 50.0 : 31.0) * scale, contentW, (tablet ? 30.0 : 24.0) * scale);
 
     UITextField *field = (UITextField *)[card viewWithTag:7007];
-    field.frame = CGRectMake(horizontalPadding, 78.0 * scale, contentW, fieldH);
+    field.frame = CGRectMake(horizontalPadding, (tablet ? 108.0 : 78.0) * scale, contentW, fieldH);
     field.layer.cornerRadius = 17.0 * scale;
 
     UIButton *did = (UIButton *)[card viewWithTag:7008];
-    did.frame = CGRectMake(horizontalPadding, 146.0 * scale, contentW, 52.0 * scale);
-    did.layer.cornerRadius = 17.0 * scale;
-    did.titleLabel.font = [UIFont systemFontOfSize:17.0 * scale weight:UIFontWeightBold];
+    did.frame = CGRectMake(horizontalPadding, (tablet ? 220.0 : 146.0) * scale, contentW, (tablet ? 76.0 : 52.0) * scale);
+    did.layer.cornerRadius = (tablet ? 22.0 : 17.0) * scale;
+    did.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 24.0 : 17.0) * scale weight:UIFontWeightBold];
 
     UIButton *login = (UIButton *)[card viewWithTag:7009];
-    login.frame = CGRectMake(horizontalPadding, 213.0 * scale, contentW, 54.0 * scale);
-    login.layer.cornerRadius = 17.0 * scale;
-    login.titleLabel.font = [UIFont systemFontOfSize:19.0 * scale weight:UIFontWeightBold];
+    login.frame = CGRectMake(horizontalPadding, (tablet ? 330.0 : 213.0) * scale, contentW, (tablet ? 84.0 : 54.0) * scale);
+    login.layer.cornerRadius = (tablet ? 22.0 : 17.0) * scale;
+    login.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 26.0 : 19.0) * scale weight:UIFontWeightBold];
+
+    UIActivityIndicatorView *indicator = (UIActivityIndicatorView *)[card viewWithTag:7014];
+    indicator.center = CGPointMake(CGRectGetMidX(login.frame), CGRectGetMidY(login.frame));
+
+    UILabel *status = (UILabel *)[card viewWithTag:7015];
+    status.frame = CGRectMake(horizontalPadding, CGRectGetMaxY(login.frame) + (tablet ? 14.0 : 8.0) * scale, contentW, (tablet ? 36.0 : 30.0) * scale);
 
     UILabel *support = (UILabel *)[self.view viewWithTag:7010];
     UIView *leftLine = [self.view viewWithTag:7011];
     UIView *rightLine = [self.view viewWithTag:7012];
     UIButton *discord = (UIButton *)[self.view viewWithTag:7013];
-    CGFloat supportY = CGRectGetMaxY(card.frame) + (compact ? 40.0 : 61.0) * scale;
+    CGFloat supportY = CGRectGetMaxY(card.frame) + (tablet ? 78.0 : (compact ? 28.0 : 48.0)) * scale;
     CGFloat lineGap = tablet ? 88.0 : 74.0;
     support.frame = CGRectMake((W - 120.0) / 2.0, supportY, 120.0, 24.0 * scale);
     leftLine.frame = CGRectMake(sideInset + 26.0, supportY + 11.0 * scale, MAX(0.0, W / 2.0 - lineGap), 1.0);
     rightLine.frame = CGRectMake(W / 2.0 + lineGap, supportY + 11.0 * scale, MAX(0.0, W / 2.0 - lineGap - sideInset - 26.0), 1.0);
-    CGFloat icon = 52.0 * scale;
+    CGFloat icon = (tablet ? 76.0 : 52.0) * scale;
     discord.frame = CGRectMake((W - icon) / 2.0, supportY + 43.0 * scale, icon, icon);
     discord.layer.cornerRadius = icon / 2.0;
 
@@ -336,16 +360,35 @@
 }
 
 - (void)loginTapped:(UIButton *)sender {
+    NSString *key = [self.keyField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (key.length == 0 || self.activityIndicator.isAnimating) {
+        self.statusLabel.text = @"Digite sua key para continuar.";
+        self.statusLabel.textColor = [self.chzRed colorWithAlphaComponent:0.95];
+        return;
+    }
+
     sender.enabled = NO;
-    [[CHZAuthManager sharedManager] loginWithKey:self.keyField.text success:^{
-        dispatch_async(dispatch_get_main_queue(), ^{ sender.enabled = YES; [self finishLogin]; });
+    self.keyField.enabled = NO;
+    self.didButton.enabled = NO;
+    self.statusLabel.text = @"Validando sua key…";
+    self.statusLabel.textColor = self.chzMutedWhite;
+    [self.activityIndicator startAnimating];
+
+    [[CHZAuthManager sharedManager] loginWithKey:key success:^{
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.activityIndicator stopAnimating];
+            [self finishLogin];
+        });
     } failure:^(NSString *message) {
         dispatch_async(dispatch_get_main_queue(), ^{
+            [self.activityIndicator stopAnimating];
             sender.enabled = YES;
-            NSString *safe = ([message isKindOfClass:[NSString class]] && message.length) ? message : @"Falha de validação. Verifique a conexão e tente novamente.";
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Login não autorizado" message:safe preferredStyle:UIAlertControllerStyleAlert];
-            [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-            [self presentViewController:alert animated:YES completion:nil];
+            self.keyField.enabled = YES;
+            self.didButton.enabled = YES;
+            NSString *safe = ([message isKindOfClass:[NSString class]] && message.length) ? message : @"Não foi possível validar a key. Verifique a conexão e tente novamente.";
+            self.statusLabel.text = safe;
+            self.statusLabel.textColor = [self.chzRed colorWithAlphaComponent:0.95];
+            [self.keyField becomeFirstResponder];
         });
     }];
 }
@@ -355,6 +398,13 @@
     if (url) [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
 }
 
-- (void)finishLogin { [self dismissViewControllerAnimated:YES completion:nil]; }
+- (void)finishLogin {
+    self.loginButton.enabled = YES;
+    self.keyField.enabled = YES;
+    self.didButton.enabled = YES;
+    self.statusLabel.text = @"Acesso autorizado.";
+    self.statusLabel.textColor = [UIColor colorWithRed:0.25 green:0.90 blue:0.55 alpha:1.0];
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
 
 @end

@@ -1,0 +1,21 @@
+# Credenciais e configuração local
+Config/CHZSecrets.h
+*.p12
+*.mobileprovision
+*.cer
+*.key
+
+# Artefatos de build
+build/
+DerivedData/
+*.o
+*.dylib
+*.ipa
+*.app/
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+
+# Sistema
+.DS_Store

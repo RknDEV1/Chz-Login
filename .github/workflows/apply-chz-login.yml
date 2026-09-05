@@ -1,0 +1,57 @@
+name: Apply Chz Login package
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type APPLY-CHZ-LOGIN to replace main contents'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ inputs.confirm == 'APPLY-CHZ-LOGIN' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Extract reviewed package
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/chz-package
+          mkdir -p /tmp/chz-package
+          unzip -q package/Chz-Login-final.zip -d /tmp/chz-package
+          test -f /tmp/chz-package/Chz-Login-main/Sources/CHZLoginViewController.m
+          test -f /tmp/chz-package/Chz-Login-main/Resources/CHZPrivLogo.png
+          test -f /tmp/chz-package/Chz-Login-main/Resources/discord.png
+          test ! -f /tmp/chz-package/Chz-Login-main/Config/CHZSecrets.h
+      - name: Replace repository files
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name package ! -name .github -exec rm -rf {} +
+          cp -a /tmp/chz-package/Chz-Login-main/. .
+          cp package/Chz-Login-final.zip /tmp/Chz-Login-final.zip
+          rm -rf package
+          mkdir -p package
+          cp /tmp/Chz-Login-final.zip package/Chz-Login-final.zip
+      - name: Commit replacement
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No changes to apply.'
+            exit 0
+          fi
+          git commit -m 'Apply reviewed CHZ Login package'
+          git push origin HEAD:main

@@ -1,0 +1,597 @@
+[1mdiff --git a/.github/workflows/check.yml b/.github/workflows/check.yml[m
+[1mindex eedf9db..63098ca 100644[m
+[1m--- a/.github/workflows/check.yml[m
+[1m+++ b/.github/workflows/check.yml[m
+[36m@@ -1,4 +1,4 @@[m
+[31m-name: Check CHZ PRIV[m
+[32m+[m[32mname: Check[m
+ [m
+ on:[m
+   workflow_dispatch:[m
+[36m@@ -14,11 +14,16 @@[m [mjobs:[m
+         uses: actions/checkout@v4[m
+ [m
+       - name: Conferir arquivos do projeto[m
+[32m+[m[32m        shell: bash[m
+         run: |[m
+[32m+[m[32m          set -euo pipefail[m
+           test -f "Config/CHZSecrets.example.h"[m
+           test -f "Sources/CHZAuthManager.m"[m
+           test -f "Sources/CHZKeychain.m"[m
+           test -f "Sources/CHZLoginViewController.m"[m
+[31m-          test -f "Vendor/LiteSecure/APIClient.h"[m
+[31m-          test -f "Vendor/LiteSecure/libAPIClient.a"[m
+[31m-          echo "Estrutura conferida."[m
+[32m+[m[32m          test -f "Sources/CHZLoginBootstrap.m"[m
+[32m+[m[32m          test -f "Vendor/API/APIClient.h"[m
+[32m+[m[32m          test -f "Vendor/API/libAPIClient.a"[m
+[32m+[m[32m          grep -q "__attribute__((constructor))" "Sources/CHZLoginBootstrap.m"[m
+[32m+[m[32m          grep -q "CHZTryPresentLogin" "Sources/CHZLoginBootstrap.m"[m
+[32m+[m[32m          echo "Estrutura e bootstrap conferidos."[m
+[1mdiff --git a/Sources/CHZLoginBootstrap.m b/Sources/CHZLoginBootstrap.m[m
+[1mindex a1aeb91..d7e67c4 100644[m
+[1m--- a/Sources/CHZLoginBootstrap.m[m
+[1m+++ b/Sources/CHZLoginBootstrap.m[m
+[36m@@ -1,78 +1,124 @@[m
+[31m-#import <Foundation/Foundation.h>[m
+ #import <UIKit/UIKit.h>[m
+ #import <dispatch/dispatch.h>[m
+ [m
+ #import "CHZLoginViewController.h"[m
+ [m
+[31m-static void CHZShowLogin(void) {[m
+[31m-    dispatch_async(dispatch_get_main_queue(), ^{[m
+[31m-        NSLog(@"[CHZ TEST] iniciou apresentação");[m
+[31m-[m
+[31m-        UIWindow *window = nil;[m
+[32m+[m[32mstatic BOOL CHZLoginWasPresented = NO;[m
+[32m+[m[32mstatic NSUInteger CHZPresentationAttempts = 0;[m
+[32m+[m[32mstatic const NSUInteger CHZMaximumPresentationAttempts = 120;[m
+ [m
+[31m-        if (@available(iOS 13.0, *)) {[m
+[31m-            for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {[m
+[31m-                if (![scene isKindOfClass:[UIWindowScene class]]) {[m
+[31m-                    continue;[m
+[31m-                }[m
+[32m+[m[32mstatic UIWindow *CHZActiveWindow(void) {[m
+[32m+[m[32m    UIApplication *application = UIApplication.sharedApplication;[m
+[32m+[m[32m    UIWindow *fallbackWindow = nil;[m
+ [m
+[31m-                UIWindowScene *windowScene = (UIWindowScene *)scene;[m
+[32m+[m[32m    if (@available(iOS 13.0, *)) {[m
+[32m+[m[32m        for (UIScene *scene in application.connectedScenes) {[m
+[32m+[m[32m            if (![scene isKindOfClass:[UIWindowScene class]]) continue;[m
+ [m
+[31m-                for (UIWindow *candidate in windowScene.windows) {[m
+[31m-                    if (candidate.isKeyWindow &&[m
+[31m-                        !candidate.hidden &&[m
+[31m-                        candidate.alpha > 0.0) {[m
+[31m-                        window = candidate;[m
+[31m-                        break;[m
+[31m-                    }[m
+[31m-                }[m
+[32m+[m[32m            UIWindowScene *windowScene = (UIWindowScene *)scene;[m
+[32m+[m[32m            if (windowScene.activationState == UISceneActivationStateUnattached ||[m
+[32m+[m[32m                windowScene.activationState == UISceneActivationStateBackground) {[m
+[32m+[m[32m                continue;[m
+[32m+[m[32m            }[m
+ [m
+[31m-                if (window) {[m
+[31m-                    break;[m
+[32m+[m[32m            for (UIWindow *candidate in windowScene.windows) {[m
+[32m+[m[32m                if (!candidate.hidden && candidate.alpha > 0.0 && candidate.windowLevel == UIWindowLevelNormal) {[m
+[32m+[m[32m                    if (candidate.isKeyWindow) return candidate;[m
+[32m+[m[32m                    if (!fallbackWindow) fallbackWindow = candidate;[m
+                 }[m
+             }[m
+         }[m
+[32m+[m[32m    }[m
+ [m
+[31m-        if (!window) {[m
+[31m-            NSLog(@"[CHZ TEST] nenhuma window encontrada");[m
+[31m-            return;[m
+[32m+[m[32m    if (!fallbackWindow) {[m
+[32m+[m[32m        for (UIWindow *candidate in application.windows) {[m
+[32m+[m[32m            if (!candidate.hidden && candidate.alpha > 0.0 && candidate.windowLevel == UIWindowLevelNormal) {[m
+[32m+[m[32m                if (candidate.isKeyWindow) return candidate;[m
+[32m+[m[32m                if (!fallbackWindow) fallbackWindow = candidate;[m
+[32m+[m[32m            }[m
+         }[m
+[32m+[m[32m    }[m
+ [m
+[31m-        NSLog(@"[CHZ TEST] window encontrada: %@", window);[m
+[32m+[m[32m    return fallbackWindow;[m
+[32m+[m[32m}[m
+ [m
+[31m-        UIViewController *root = window.rootViewController;[m
+[32m+[m[32mstatic UIViewController *CHZTopViewController(UIViewController *root) {[m
+[32m+[m[32m    UIViewController *top = root;[m
+ [m
+[31m-        if (!root) {[m
+[31m-            NSLog(@"[CHZ TEST] rootViewController inexistente");[m
+[31m-            return;[m
+[31m-        }[m
+[32m+[m[32m    while (top.presentedViewController && !top.presentedViewController.isBeingDismissed) {[m
+[32m+[m[32m        top = top.presentedViewController;[m
+[32m+[m[32m    }[m
+ [m
+[31m-        UIViewController *top = root;[m
+[32m+[m[32m    if ([top isKindOfClass:[UINavigationController class]]) {[m
+[32m+[m[32m        UINavigationController *navigation = (UINavigationController *)top;[m
+[32m+[m[32m        if (navigation.visibleViewController) return CHZTopViewController(navigation.visibleViewController);[m
+[32m+[m[32m    }[m
+ [m
+[31m-        while (top.presentedViewController) {[m
+[31m-            top = top.presentedViewController;[m
+[31m-        }[m
+[32m+[m[32m    if ([top isKindOfClass:[UITabBarController class]]) {[m
+[32m+[m[32m        UITabBarController *tabs = (UITabBarController *)top;[m
+[32m+[m[32m        if (tabs.selectedViewController) return CHZTopViewController(tabs.selectedViewController);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    return top;[m
+[32m+[m[32m}[m
+ [m
+[31m-        NSLog(@"[CHZ TEST] apresentando sobre: %@", top);[m
+[32m+[m[32mstatic void CHZTryPresentLogin(void);[m
+ [m
+[31m-        CHZLoginViewController *login =[m
+[31m-            [[CHZLoginViewController alloc] init];[m
+[32m+[m[32mstatic void CHZScheduleAnotherPresentationAttempt(void) {[m
+[32m+[m[32m    if (CHZLoginWasPresented || CHZPresentationAttempts >= CHZMaximumPresentationAttempts) return;[m
+ [m
+[31m-        login.modalPresentationStyle = UIModalPresentationFullScreen;[m
+[32m+[m[32m    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{[m
+[32m+[m[32m        CHZTryPresentLogin();[m
+[32m+[m[32m    });[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mstatic void CHZTryPresentLogin(void) {[m
+[32m+[m[32m    if (CHZLoginWasPresented) return;[m
+[32m+[m[32m    CHZPresentationAttempts += 1;[m
+[32m+[m
+[32m+[m[32m    UIWindow *window = CHZActiveWindow();[m
+[32m+[m[32m    UIViewController *root = window.rootViewController;[m
+[32m+[m[32m    if (!window || !root || !root.viewIfLoaded.window) {[m
+[32m+[m[32m        CHZScheduleAnotherPresentationAttempt();[m
+[32m+[m[32m        return;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    UIViewController *top = CHZTopViewController(root);[m
+[32m+[m[32m    if (!top || top.isBeingDismissed || top.isBeingPresented) {[m
+[32m+[m[32m        CHZScheduleAnotherPresentationAttempt();[m
+[32m+[m[32m        return;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    if ([top isKindOfClass:[CHZLoginViewController class]] ||[m
+[32m+[m[32m        [top.presentedViewController isKindOfClass:[CHZLoginViewController class]]) {[m
+[32m+[m[32m        CHZLoginWasPresented = YES;[m
+[32m+[m[32m        return;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    CHZLoginViewController *login = [[CHZLoginViewController alloc] init];[m
+[32m+[m[32m    login.modalPresentationStyle = UIModalPresentationFullScreen;[m
+[32m+[m[32m    CHZLoginWasPresented = YES;[m
+[32m+[m
+[32m+[m[32m    [top presentViewController:login animated:NO completion:^{[m
+[32m+[m[32m        NSLog(@"[CHZLogin] tela de login apresentada na inicialização");[m
+[32m+[m[32m    }];[m
+[32m+[m[32m}[m
+ [m
+[31m-        [top presentViewController:login[m
+[31m-                           animated:NO[m
+[31m-                         completion:^{[m
+[31m-            NSLog(@"[CHZ TEST] LOGIN APRESENTADO");[m
+[32m+[m[32mstatic void CHZStartLoginPresentation(void) {[m
+[32m+[m[32m    dispatch_async(dispatch_get_main_queue(), ^{[m
+[32m+[m[32m        [[NSNotificationCenter defaultCenter] addObserverForName:UISceneDidActivateNotification[m
+[32m+[m[32m                                                            object:nil[m
+[32m+[m[32m                                                             queue:[NSOperationQueue mainQueue][m
+[32m+[m[32m                                                        usingBlock:^(__unused NSNotification *notification) {[m
+[32m+[m[32m            CHZTryPresentLogin();[m
+         }];[m
+[32m+[m
+[32m+[m[32m        CHZTryPresentLogin();[m
+     });[m
+ }[m
+ [m
+ __attribute__((constructor))[m
+ static void CHZLoginBootstrapConstructor(void) {[m
+[31m-    NSLog(@"[CHZ TEST] DYLIB CARREGOU");[m
+[31m-[m
+[31m-    dispatch_async(dispatch_get_main_queue(), ^{[m
+[31m-        CHZShowLogin();[m
+[31m-    });[m
+[32m+[m[32m    NSLog(@"[CHZLogin] bootstrap carregado; aguardando a janela do app");[m
+[32m+[m[32m    CHZStartLoginPresentation();[m
+ }[m
+[1mdiff --git a/Sources/CHZLoginViewController.m b/Sources/CHZLoginViewController.m[m
+[1mindex 4eab5ad..cfabece 100644[m
+[1m--- a/Sources/CHZLoginViewController.m[m
+[1m+++ b/Sources/CHZLoginViewController.m[m
+[36m@@ -6,16 +6,31 @@[m
+ @property (nonatomic, strong) UITextField *keyField;[m
+ @property (nonatomic, strong) UIButton *loginButton;[m
+ @property (nonatomic, strong) UIButton *didButton;[m
+[32m+[m[32m@property (nonatomic, strong) CAGradientLayer *topGradient;[m
+[32m+[m[32m@property (nonatomic, strong) CAGradientLayer *bottomGradient;[m
+ @end[m
+ [m
+ @implementation CHZLoginViewController[m
+ [m
+[31m-- (UIColor *)chzRed { return [UIColor colorWithRed:1.0 green:0.02 blue:0.06 alpha:1.0]; }[m
+[31m-- (UIColor *)chzWhite { return [UIColor colorWithWhite:0.96 alpha:1.0]; }[m
+[32m+[m[32m- (UIColor *)chzRed {[m
+[32m+[m[32m    return [UIColor colorWithRed:1.0 green:0.015 blue:0.075 alpha:1.0];[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m- (UIColor *)chzWhite {[m
+[32m+[m[32m    return [UIColor colorWithWhite:0.96 alpha:1.0];[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m- (UIColor *)chzMutedWhite {[m
+[32m+[m[32m    return [UIColor colorWithWhite:0.70 alpha:1.0];[m
+[32m+[m[32m}[m
+ [m
+ - (void)viewDidLoad {[m
+     [super viewDidLoad];[m
+[31m-    self.view.backgroundColor = [UIColor blackColor];[m
+[32m+[m
+[32m+[m[32m    // A referência é uma composição escura; mantém o mesmo resultado no modo claro e escuro do sistema.[m
+[32m+[m[32m    self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;[m
+[32m+[m[32m    self.modalPresentationCapturesStatusBarAppearance = YES;[m
+[32m+[m[32m    self.view.backgroundColor = UIColor.blackColor;[m
+     self.view.clipsToBounds = YES;[m
+     [self buildInterface];[m
+ [m
+[36m@@ -36,81 +51,102 @@[m
+ }[m
+ [m
+ - (void)buildInterface {[m
+[31m-    // Frame-based layout only. No NSLayoutConstraint is used on this screen.[m
+[32m+[m[32m    self.topGradient = [CAGradientLayer layer];[m
+[32m+[m[32m    self.topGradient.colors = @[[m
+[32m+[m[32m        (id)[UIColor clearColor].CGColor,[m
+[32m+[m[32m        (id)[self.chzRed colorWithAlphaComponent:0.22].CGColor,[m
+[32m+[m[32m        (id)[UIColor clearColor].CGColor[m
+[32m+[m[32m    ];[m
+[32m+[m[32m    self.topGradient.startPoint = CGPointMake(0.0, 0.5);[m
+[32m+[m[32m    self.topGradient.endPoint = CGPointMake(1.0, 0.5);[m
+[32m+[m[32m    [self.view.layer addSublayer:self.topGradient];[m
+[32m+[m
+[32m+[m[32m    self.bottomGradient = [CAGradientLayer layer];[m
+[32m+[m[32m    self.bottomGradient.colors = @[[m
+[32m+[m[32m        (id)[UIColor clearColor].CGColor,[m
+[32m+[m[32m        (id)[self.chzRed colorWithAlphaComponent:0.16].CGColor,[m
+[32m+[m[32m        (id)[UIColor clearColor].CGColor[m
+[32m+[m[32m    ];[m
+[32m+[m[32m    self.bottomGradient.startPoint = CGPointMake(0.0, 0.5);[m
+[32m+[m[32m    self.bottomGradient.endPoint = CGPointMake(1.0, 0.5);[m
+[32m+[m[32m    [self.view.layer addSublayer:self.bottomGradient];[m
+[32m+[m
+     UIView *topGlow = [[UIView alloc] initWithFrame:CGRectZero];[m
+     topGlow.tag = 7001;[m
+[31m-    topGlow.backgroundColor = [self chzRed];[m
+[31m-    topGlow.alpha = 0.035;[m
+[31m-    topGlow.layer.cornerRadius = 170.0;[m
+[31m-    topGlow.layer.shadowColor = [self chzRed].CGColor;[m
+[31m-    topGlow.layer.shadowOpacity = 0.75;[m
+[31m-    topGlow.layer.shadowRadius = 90.0;[m
+[32m+[m[32m    topGlow.backgroundColor = UIColor.clearColor;[m
+[32m+[m[32m    topGlow.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.70].CGColor;[m
+[32m+[m[32m    topGlow.layer.borderWidth = 1.3;[m
+[32m+[m[32m    topGlow.layer.cornerRadius = 190.0;[m
+[32m+[m[32m    topGlow.layer.shadowColor = self.chzRed.CGColor;[m
+[32m+[m[32m    topGlow.layer.shadowOpacity = 0.55;[m
+[32m+[m[32m    topGlow.layer.shadowRadius = 18.0;[m
+     topGlow.layer.shadowOffset = CGSizeZero;[m
+     [self.view addSubview:topGlow];[m
+ [m
+[31m-    // Wordmark built from native text so there is no fragile image decoding at launch.[m
+[32m+[m[32m    UIView *card = [[UIView alloc] initWithFrame:CGRectZero];[m
+[32m+[m[32m    card.tag = 7005;[m
+[32m+[m[32m    card.backgroundColor = [UIColor colorWithWhite:0.015 alpha:0.94];[m
+[32m+[m[32m    card.layer.cornerRadius = 31.0;[m
+[32m+[m[32m    card.layer.cornerCurve = kCACornerCurveContinuous;[m
+[32m+[m[32m    card.layer.borderWidth = 1.15;[m
+[32m+[m[32m    card.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.88].CGColor;[m
+[32m+[m[32m    card.layer.shadowColor = self.chzRed.CGColor;[m
+[32m+[m[32m    card.layer.shadowOpacity = 0.23;[m
+[32m+[m[32m    card.layer.shadowRadius = 26.0;[m
+[32m+[m[32m    card.layer.shadowOffset = CGSizeZero;[m
+[32m+[m[32m    [self.view addSubview:card];[m
+[32m+[m
+     UILabel *chz = [[UILabel alloc] initWithFrame:CGRectZero];[m
+     chz.tag = 7002;[m
+     chz.text = @"CHZ";[m
+[31m-    chz.textColor = [self chzRed];[m
+[31m-    chz.font = [UIFont italicSystemFontOfSize:48.0];[m
+[32m+[m[32m    chz.textColor = self.chzRed;[m
+[32m+[m[32m    chz.font = [UIFont italicSystemFontOfSize:52.0];[m
+     chz.textAlignment = NSTextAlignmentRight;[m
+     [self.view addSubview:chz];[m
+ [m
+     UILabel *priv = [[UILabel alloc] initWithFrame:CGRectZero];[m
+     priv.tag = 7003;[m
+     priv.text = @"PRIV";[m
+[31m-    priv.textColor = [self chzWhite];[m
+[31m-    priv.font = [UIFont italicSystemFontOfSize:48.0];[m
+[32m+[m[32m    priv.textColor = self.chzWhite;[m
+[32m+[m[32m    priv.font = [UIFont italicSystemFontOfSize:52.0];[m
+     priv.textAlignment = NSTextAlignmentLeft;[m
+     [self.view addSubview:priv];[m
+ [m
+     UILabel *subtitle = [[UILabel alloc] initWithFrame:CGRectZero];[m
+     subtitle.tag = 7004;[m
+     subtitle.text = @"Acesse sua conta";[m
+[31m-    subtitle.textColor = [UIColor colorWithWhite:0.72 alpha:1.0];[m
+[32m+[m[32m    subtitle.textColor = self.chzMutedWhite;[m
+     subtitle.font = [UIFont systemFontOfSize:17.0 weight:UIFontWeightMedium];[m
+     subtitle.textAlignment = NSTextAlignmentCenter;[m
+     [self.view addSubview:subtitle];[m
+ [m
+[31m-    UIView *card = [[UIView alloc] initWithFrame:CGRectZero];[m
+[31m-    card.tag = 7005;[m
+[31m-    card.backgroundColor = [UIColor colorWithWhite:0.035 alpha:0.92];[m
+[31m-    card.layer.cornerRadius = 30.0;[m
+[31m-    card.layer.cornerCurve = kCACornerCurveContinuous;[m
+[31m-    card.layer.borderWidth = 1.0;[m
+[31m-    card.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.82].CGColor;[m
+[31m-    card.layer.shadowColor = [self chzRed].CGColor;[m
+[31m-    card.layer.shadowOpacity = 0.16;[m
+[31m-    card.layer.shadowRadius = 25.0;[m
+[31m-    card.layer.shadowOffset = CGSizeZero;[m
+[31m-    [self.view addSubview:card];[m
+[31m-[m
+     UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];[m
+     label.tag = 7006;[m
+     label.text = @"KEY DE ACESSO";[m
+[31m-    label.textColor = [self chzWhite];[m
+[32m+[m[32m    label.textColor = self.chzWhite;[m
+     label.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightBold];[m
+     [card addSubview:label];[m
+ [m
+     self.keyField = [[UITextField alloc] initWithFrame:CGRectZero];[m
+     self.keyField.tag = 7007;[m
+     self.keyField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:@"Digite sua key" attributes:@{NSForegroundColorAttributeName:[UIColor colorWithWhite:0.42 alpha:1.0]}];[m
+[31m-    self.keyField.textColor = [self chzWhite];[m
+[32m+[m[32m    self.keyField.textColor = self.chzWhite;[m
+     self.keyField.font = [UIFont systemFontOfSize:18.0 weight:UIFontWeightMedium];[m
+[31m-    self.keyField.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.42];[m
+[32m+[m[32m    self.keyField.backgroundColor = [UIColor colorWithWhite:0.035 alpha:0.90];[m
+     self.keyField.layer.cornerRadius = 17.0;[m
+     self.keyField.layer.cornerCurve = kCACornerCurveContinuous;[m
+     self.keyField.layer.borderWidth = 1.0;[m
+[31m-    self.keyField.layer.borderColor = [UIColor colorWithRed:1.0 green:0.10 blue:0.14 alpha:0.38].CGColor;[m
+[32m+[m[32m    self.keyField.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.34].CGColor;[m
+     self.keyField.autocorrectionType = UITextAutocorrectionTypeNo;[m
+     self.keyField.autocapitalizationType = UITextAutocapitalizationTypeNone;[m
+     self.keyField.returnKeyType = UIReturnKeyDone;[m
+[32m+[m[32m    self.keyField.keyboardAppearance = UIKeyboardAppearanceDark;[m
+     self.keyField.delegate = self;[m
+[31m-    UIView *left = [[UIView alloc] initWithFrame:CGRectMake(0,0,54,50)];[m
+[32m+[m
+[32m+[m[32m    UIView *left = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 58, 50)];[m
+     UIImageView *keyIcon = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"key"]];[m
+[31m-    keyIcon.frame = CGRectMake(17,13,24,24);[m
+[31m-    keyIcon.tintColor = [self chzRed];[m
+[32m+[m[32m    keyIcon.frame = CGRectMake(18, 13, 24, 24);[m
+[32m+[m[32m    keyIcon.tintColor = self.chzRed;[m
+     keyIcon.contentMode = UIViewContentModeScaleAspectFit;[m
+     [left addSubview:keyIcon];[m
+     self.keyField.leftView = left;[m
+[36m@@ -119,6 +155,12 @@[m
+ [m
+     self.didButton = [self makeButton:@"OBTER DID" filled:NO action:@selector(didTapped:)];[m
+     self.didButton.tag = 7008;[m
+[32m+[m[32m    UIImage *didIcon = [UIImage systemImageNamed:@"person.crop.rectangle"];[m
+[32m+[m[32m    if (didIcon) {[m
+[32m+[m[32m        [self.didButton setImage:[didIcon imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];[m
+[32m+[m[32m        self.didButton.tintColor = [UIColor colorWithWhite:0.82 alpha:1.0];[m
+[32m+[m[32m        self.didButton.imageEdgeInsets = UIEdgeInsetsMake(0, -8, 0, 8);[m
+[32m+[m[32m    }[m
+     [card addSubview:self.didButton];[m
+ [m
+     self.loginButton = [self makeButton:@"ENTRAR" filled:YES action:@selector(loginTapped:)];[m
+[36m@@ -128,7 +170,7 @@[m
+     UILabel *support = [[UILabel alloc] initWithFrame:CGRectZero];[m
+     support.tag = 7010;[m
+     support.text = @"SUPORTE";[m
+[31m-    support.textColor = [UIColor colorWithWhite:0.54 alpha:1.0];[m
+[32m+[m[32m    support.textColor = [UIColor colorWithWhite:0.50 alpha:1.0];[m
+     support.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightBold];[m
+     support.textAlignment = NSTextAlignmentCenter;[m
+     [self.view addSubview:support];[m
+[36m@@ -137,6 +179,7 @@[m
+     leftLine.tag = 7011;[m
+     leftLine.backgroundColor = [UIColor colorWithWhite:0.30 alpha:0.9];[m
+     [self.view addSubview:leftLine];[m
+[32m+[m
+     UIView *rightLine = [[UIView alloc] initWithFrame:CGRectZero];[m
+     rightLine.tag = 7012;[m
+     rightLine.backgroundColor = [UIColor colorWithWhite:0.30 alpha:0.9];[m
+[36m@@ -145,19 +188,22 @@[m
+     UIButton *discord = [UIButton buttonWithType:UIButtonTypeSystem];[m
+     discord.tag = 7013;[m
+     discord.accessibilityLabel = @"Discord";[m
+[31m-    discord.frame = CGRectZero;[m
+[31m-    discord.layer.cornerRadius = 25.0;[m
+[32m+[m[32m    discord.layer.cornerRadius = 26.0;[m
+     discord.layer.borderWidth = 1.0;[m
+[31m-    discord.layer.borderColor = [self chzRed].CGColor;[m
+[31m-    discord.layer.shadowColor = [self chzRed].CGColor;[m
+[31m-    discord.layer.shadowOpacity = 0.28;[m
+[31m-    discord.layer.shadowRadius = 12.0;[m
+[32m+[m[32m    discord.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.75].CGColor;[m
+[32m+[m[32m    discord.layer.shadowColor = self.chzRed.CGColor;[m
+[32m+[m[32m    discord.layer.shadowOpacity = 0.30;[m
+[32m+[m[32m    discord.layer.shadowRadius = 13.0;[m
+     discord.layer.shadowOffset = CGSizeZero;[m
+     UIImage *discordImage = [UIImage imageNamed:@"discord"];[m
+[31m-    if (discordImage) [discord setImage:[discordImage imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal] forState:UIControlStateNormal];[m
+[31m-    else [discord setImage:[UIImage systemImageNamed:@"message.fill"] forState:UIControlStateNormal];[m
+[32m+[m[32m    if (discordImage) {[m
+[32m+[m[32m        [discord setImage:[discordImage imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal] forState:UIControlStateNormal];[m
+[32m+[m[32m    } else {[m
+[32m+[m[32m        UIImage *fallback = [UIImage systemImageNamed:@"message.fill"];[m
+[32m+[m[32m        [discord setImage:[fallback imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];[m
+[32m+[m[32m        discord.tintColor = self.chzWhite;[m
+[32m+[m[32m    }[m
+     discord.imageView.contentMode = UIViewContentModeScaleAspectFit;[m
+[31m-    discord.tintColor = UIColor.whiteColor;[m
+     [discord addTarget:self action:@selector(discordTapped:) forControlEvents:UIControlEventTouchUpInside];[m
+     [self.view addSubview:discord];[m
+ }[m
+[36m@@ -168,16 +214,16 @@[m
+     button.layer.cornerRadius = 17.0;[m
+     button.layer.cornerCurve = kCACornerCurveContinuous;[m
+     button.layer.borderWidth = 1.0;[m
+[31m-    button.layer.borderColor = filled ? [self chzRed].CGColor : [UIColor colorWithWhite:0.30 alpha:0.75].CGColor;[m
+[31m-    button.backgroundColor = filled ? [self chzRed] : [UIColor colorWithWhite:0.09 alpha:0.95];[m
+[32m+[m[32m    button.layer.borderColor = filled ? self.chzRed.CGColor : [UIColor colorWithWhite:0.28 alpha:0.82].CGColor;[m
+[32m+[m[32m    button.backgroundColor = filled ? self.chzRed : [UIColor colorWithWhite:0.09 alpha:0.95];[m
+     [button setTitle:title forState:UIControlStateNormal];[m
+     [button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];[m
+     button.titleLabel.font = [UIFont systemFontOfSize:(filled ? 19.0 : 17.0) weight:UIFontWeightBold];[m
+     button.titleLabel.textAlignment = NSTextAlignmentCenter;[m
+     if (filled) {[m
+[31m-        button.layer.shadowColor = [self chzRed].CGColor;[m
+[31m-        button.layer.shadowOpacity = 0.24;[m
+[31m-        button.layer.shadowRadius = 12.0;[m
+[32m+[m[32m        button.layer.shadowColor = self.chzRed.CGColor;[m
+[32m+[m[32m        button.layer.shadowOpacity = 0.30;[m
+[32m+[m[32m        button.layer.shadowRadius = 13.0;[m
+         button.layer.shadowOffset = CGSizeZero;[m
+     }[m
+     [button addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];[m
+[36m@@ -187,65 +233,92 @@[m
+ - (void)layoutReference {[m
+     CGFloat W = CGRectGetWidth(self.view.bounds);[m
+     CGFloat H = CGRectGetHeight(self.view.bounds);[m
+[31m-    if (W <= 0 || H <= 0) return;[m
+[31m-    CGFloat top = self.view.safeAreaInsets.top;[m
+[31m-    CGFloat bottom = self.view.safeAreaInsets.bottom;[m
+[31m-    BOOL compact = H < 700.0;[m
+[32m+[m[32m    if (W <= 0.0 || H <= 0.0) return;[m
+[32m+[m
+[32m+[m[32m    CGFloat safeTop = self.view.safeAreaInsets.top;[m
+[32m+[m[32m    CGFloat safeBottom = self.view.safeAreaInsets.bottom;[m
+[32m+[m[32m    CGFloat availableHeight = MAX(1.0, H - safeTop - safeBottom);[m
+[32m+[m[32m    CGFloat scale = MIN(1.0, MAX(0.78, availableHeight / 760.0));[m
+[32m+[m[32m    BOOL compact = availableHeight < 650.0;[m
+[32m+[m[32m    BOOL tablet = MIN(W, H) >= 600.0;[m
+ [m
+[32m+[m[32m    self.topGradient.frame = CGRectMake(MAX(0.0, W * 0.12), safeTop + 125.0 * scale, W * 0.76, 3.0);[m
+[32m+[m[32m    self.bottomGradient.frame = CGRectMake(MAX(0.0, W * 0.16), H - safeBottom - 250.0 * scale, W * 0.68, 3.0);[m
+[32m+[m
+[32m+[m[32m    CGFloat glowDiameter = MIN(W * 0.66, tablet ? 420.0 : 340.0);[m
+     UIView *glow = [self.view viewWithTag:7001];[m
+[31m-    glow.frame = CGRectMake((W-340)/2.0, top-105, 340, 340);[m
+[32m+[m[32m    glow.frame = CGRectMake((W - glowDiameter) / 2.0, safeTop + 22.0 * scale, glowDiameter, glowDiameter * 0.42);[m
+[32m+[m[32m    glow.layer.cornerRadius = glow.frame.size.height / 2.0;[m
+ [m
+[31m-    CGFloat logoY = top + (compact ? 25 : 50);[m
+[31m-    CGFloat logoW = MIN(W * 0.58, 285.0);[m
+[31m-    CGFloat wordH = 58.0;[m
+[31m-    CGFloat gap = 0.0;[m
+[32m+[m[32m    CGFloat logoY = safeTop + (tablet ? 54.0 : 42.0) * scale;[m
+[32m+[m[32m    CGFloat logoW = MIN(W * (tablet ? 0.58 : 0.70), tablet ? 420.0 : 350.0);[m
+[32m+[m[32m    CGFloat wordH = 58.0 * scale;[m
+     UILabel *chz = (UILabel *)[self.view viewWithTag:7002];[m
+     UILabel *priv = (UILabel *)[self.view viewWithTag:7003];[m
+[31m-    chz.frame = CGRectMake((W-logoW)/2.0, logoY, logoW*0.49, wordH);[m
+[31m-    priv.frame = CGRectMake(CGRectGetMidX(chz.frame)-3, logoY, logoW*0.53, wordH);[m
+[32m+[m[32m    chz.font = [UIFont italicSystemFontOfSize:52.0 * scale];[m
+[32m+[m[32m    priv.font = [UIFont italicSystemFontOfSize:52.0 * scale];[m
+[32m+[m[32m    chz.frame = CGRectMake((W - logoW) / 2.0, logoY, logoW * 0.49, wordH);[m
+[32m+[m[32m    priv.frame = CGRectMake(CGRectGetMidX(chz.frame) - 3.0 * scale, logoY, logoW * 0.53, wordH);[m
+ [m
+     UILabel *subtitle = (UILabel *)[self.view viewWithTag:7004];[m
+[31m-    subtitle.frame = CGRectMake(20, CGRectGetMaxY(chz.frame)+13, W-40, 24);[m
+[31m-[m
+[31m-    CGFloat cardW = MIN(W-44, 726.0);[m
+[31m-    if (W <= 430) cardW = W-42;[m
+[31m-    CGFloat cardH = compact ? 285 : 305;[m
+[31m-    CGFloat cardY = CGRectGetMaxY(subtitle.frame) + (compact ? 22 : 38);[m
+[31m-    if (cardY + cardH > H - 155) cardY = MAX(top+150, H - 155 - cardH);[m
+[32m+[m[32m    subtitle.font = [UIFont systemFontOfSize:17.0 * scale weight:UIFontWeightMedium];[m
+[32m+[m[32m    subtitle.frame = CGRectMake(20.0, CGRectGetMaxY(chz.frame) + 13.0 * scale, W - 40.0, 25.0 * scale);[m
+[32m+[m
+[32m+[m[32m    CGFloat maxCardWidth = tablet ? 726.0 : 680.0;[m
+[32m+[m[32m    CGFloat sideInset = tablet ? 42.0 : 21.0;[m
+[32m+[m[32m    CGFloat cardW = MIN(W - 2.0 * sideInset, maxCardWidth);[m
+[32m+[m[32m    CGFloat cardH = (compact ? 285.0 : 305.0) * scale;[m
+[32m+[m[32m    CGFloat cardY = CGRectGetMaxY(subtitle.frame) + (compact ? 23.0 : 39.0) * scale;[m
+     UIView *card = [self.view viewWithTag:7005];[m
+[31m-    card.frame = CGRectMake((W-cardW)/2.0, cardY, cardW, cardH);[m
+[32m+[m[32m    card.frame = CGRectMake((W - cardW) / 2.0, cardY, cardW, cardH);[m
+ [m
+[32m+[m[32m    CGFloat horizontalPadding = (compact ? 36.0 : 48.0) * scale;[m
+[32m+[m[32m    CGFloat contentW = cardW - 2.0 * horizontalPadding;[m
+[32m+[m[32m    CGFloat fieldH = 54.0 * scale;[m
+     UILabel *label = (UILabel *)[card viewWithTag:7006];[m
+[31m-    label.frame = CGRectMake(48, 31, cardW-96, 24);[m
+[32m+[m[32m    label.font = [UIFont systemFontOfSize:15.0 * scale weight:UIFontWeightBold];[m
+[32m+[m[32m    label.frame = CGRectMake(horizontalPadding, 31.0 * scale, contentW, 24.0 * scale);[m
+ [m
+     UITextField *field = (UITextField *)[card viewWithTag:7007];[m
+[31m-    field.frame = CGRectMake(48, 78, cardW-96, 54);[m
+[32m+[m[32m    field.frame = CGRectMake(horizontalPadding, 78.0 * scale, contentW, fieldH);[m
+[32m+[m[32m    field.layer.cornerRadius = 17.0 * scale;[m
+ [m
+     UIButton *did = (UIButton *)[card viewWithTag:7008];[m
+[31m-    did.frame = CGRectMake(48, 146, cardW-96, 52);[m
+[32m+[m[32m    did.frame = CGRectMake(horizontalPadding, 146.0 * scale, contentW, 52.0 * scale);[m
+[32m+[m[32m    did.layer.cornerRadius = 17.0 * scale;[m
+[32m+[m[32m    did.titleLabel.font = [UIFont systemFontOfSize:17.0 * scale weight:UIFontWeightBold];[m
+ [m
+     UIButton *login = (UIButton *)[card viewWithTag:7009];[m
+[31m-    login.frame = CGRectMake(48, 213, cardW-96, 54);[m
+[31m-    if (compact) {[m
+[31m-        label.frame = CGRectMake(36, 24, cardW-72, 22);[m
+[31m-        field.frame = CGRectMake(36, 64, cardW-72, 50);[m
+[31m-        did.frame = CGRectMake(36, 125, cardW-72, 48);[m
+[31m-        login.frame = CGRectMake(36, 184, cardW-72, 52);[m
+[31m-    }[m
+[32m+[m[32m    login.frame = CGRectMake(horizontalPadding, 213.0 * scale, contentW, 54.0 * scale);[m
+[32m+[m[32m    login.layer.cornerRadius = 17.0 * scale;[m
+[32m+[m[32m    login.titleLabel.font = [UIFont systemFontOfSize:19.0 * scale weight:UIFontWeightBold];[m
+ [m
+     UILabel *support = (UILabel *)[self.view viewWithTag:7010];[m
+     UIView *leftLine = [self.view viewWithTag:7011];[m
+     UIView *rightLine = [self.view viewWithTag:7012];[m
+     UIButton *discord = (UIButton *)[self.view viewWithTag:7013];[m
+[31m-    CGFloat supportY = CGRectGetMaxY(card.frame) + (compact ? 45 : 62);[m
+[31m-    support.frame = CGRectMake((W-110)/2.0, supportY, 110, 24);[m
+[31m-    leftLine.frame = CGRectMake(48, supportY+11, MAX(0, W/2.0-74), 1);[m
+[31m-    rightLine.frame = CGRectMake(W/2.0+74, supportY+11, MAX(0, W/2.0-122), 1);[m
+[31m-    CGFloat icon = 50.0;[m
+[31m-    discord.frame = CGRectMake((W-icon)/2.0, supportY+42, icon, icon);[m
+[31m-    discord.imageView.contentMode = UIViewContentModeScaleAspectFit;[m
+[31m-    (void)bottom;[m
+[31m-    (void)gap;[m
+[32m+[m[32m    CGFloat supportY = CGRectGetMaxY(card.frame) + (compact ? 40.0 : 61.0) * scale;[m
+[32m+[m[32m    CGFloat lineGap = tablet ? 88.0 : 74.0;[m
+[32m+[m[32m    support.frame = CGRectMake((W - 120.0) / 2.0, supportY, 120.0, 24.0 * scale);[m
+[32m+[m[32m    leftLine.frame = CGRectMake(sideInset + 26.0, supportY + 11.0 * scale, MAX(0.0, W / 2.0 - lineGap), 1.0);[m
+[32m+[m[32m    rightLine.frame = CGRectMake(W / 2.0 + lineGap, supportY + 11.0 * scale, MAX(0.0, W / 2.0 - lineGap - sideInset - 26.0), 1.0);[m
+[32m+[m[32m    CGFloat icon = 52.0 * scale;[m
+[32m+[m[32m    discord.frame = CGRectMake((W - icon) / 2.0, supportY + 43.0 * scale, icon, icon);[m
+[32m+[m[32m    discord.layer.cornerRadius = icon / 2.0;[m
+[32m+[m
+[32m+[m[32m    CGFloat overflow = CGRectGetMaxY(discord.frame) - (H - safeBottom - 18.0);[m
+[32m+[m[32m    if (overflow > 0.0) {[m
+[32m+[m[32m        CGFloat shift = MIN(overflow, MAX(0.0, logoY - safeTop - 10.0));[m
+[32m+[m[32m        for (UIView *view in self.view.subviews) {[m
+[32m+[m[32m            if (view == card) continue;[m
+[32m+[m[32m            view.center = CGPointMake(view.center.x, view.center.y - shift);[m
+[32m+[m[32m        }[m
+[32m+[m[32m        card.center = CGPointMake(card.center.x, card.center.y - shift);[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m- (UIStatusBarStyle)preferredStatusBarStyle {[m
+[32m+[m[32m    return UIStatusBarStyleLightContent;[m
+ }[m
+ [m
+ - (void)chz_dismissKeyboard { [self.view endEditing:YES]; }[m

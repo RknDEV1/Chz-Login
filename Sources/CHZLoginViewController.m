@@ -6,6 +6,7 @@
 @property (nonatomic, strong) UITextField *keyField;
 @property (nonatomic, strong) UIButton *loginButton;
 @property (nonatomic, strong) UIButton *didButton;
+@property (nonatomic, strong) UIImageView *logoView;
 @property (nonatomic, strong) UIActivityIndicatorView *activityIndicator;
 @property (nonatomic, strong) UILabel *statusLabel;
 @property (nonatomic, strong) CAGradientLayer *topGradient;
@@ -40,11 +41,12 @@
     tap.cancelsTouchesInView = NO;
     [self.view addGestureRecognizer:tap];
 
-    [[CHZAuthManager sharedManager] validateSavedKeyWithSuccess:^{
-        dispatch_async(dispatch_get_main_queue(), ^{ [self finishLogin]; });
-    } failure:^(__unused NSString *message) {
-        dispatch_async(dispatch_get_main_queue(), ^{ self.keyField.text = @""; });
-    }];
+    // Não valide nem dispense a tela automaticamente na abertura.
+    // A autenticação só começa após o usuário tocar em ENTRAR;
+    // isso evita que uma key antiga no Keychain feche o modal antes da interação.
+    self.keyField.text = @"";
+    self.statusLabel.text = @"Digite sua key para continuar.";
+    self.statusLabel.textColor = self.chzMutedWhite;
 }
 
 - (void)viewDidLayoutSubviews {
@@ -113,6 +115,13 @@
     priv.font = [UIFont italicSystemFontOfSize:52.0];
     priv.textAlignment = NSTextAlignmentLeft;
     [self.view addSubview:priv];
+
+    self.logoView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"CHZPrivLogo"]];
+    self.logoView.tag = 7016;
+    self.logoView.contentMode = UIViewContentModeScaleAspectFit;
+    self.logoView.accessibilityLabel = @"CHZ PRIV";
+    self.logoView.hidden = (self.logoView.image == nil);
+    [self.view addSubview:self.logoView];
 
     UILabel *subtitle = [[UILabel alloc] initWithFrame:CGRectZero];
     subtitle.tag = 7004;
@@ -277,10 +286,22 @@
     priv.font = [UIFont italicSystemFontOfSize:wordSize];
     chz.frame = CGRectMake((W - logoW) / 2.0, logoY, logoW * 0.49, wordH);
     priv.frame = CGRectMake(CGRectGetMidX(chz.frame) - 3.0 * scale, logoY, logoW * 0.53, wordH);
+    UIImageView *logoView = (UIImageView *)[self.view viewWithTag:7016];
+    if (logoView.image != nil) {
+        chz.hidden = YES;
+        priv.hidden = YES;
+        logoView.hidden = NO;
+        logoView.frame = CGRectMake((W - logoW) / 2.0, logoY - 10.0 * scale, logoW, (tablet ? 116.0 : 84.0) * scale);
+    } else {
+        chz.hidden = NO;
+        priv.hidden = NO;
+        logoView.hidden = YES;
+    }
 
     UILabel *subtitle = (UILabel *)[self.view viewWithTag:7004];
     subtitle.font = [UIFont systemFontOfSize:17.0 * scale weight:UIFontWeightMedium];
-    subtitle.frame = CGRectMake(20.0, CGRectGetMaxY(chz.frame) + 13.0 * scale, W - 40.0, 25.0 * scale);
+    CGFloat logoBottom = logoView.image != nil ? CGRectGetMaxY(logoView.frame) : CGRectGetMaxY(chz.frame);
+    subtitle.frame = CGRectMake(20.0, logoBottom + 13.0 * scale, W - 40.0, 25.0 * scale);
 
     CGFloat maxCardWidth = tablet ? 726.0 : 680.0;
     CGFloat sideInset = tablet ? 42.0 : 21.0;

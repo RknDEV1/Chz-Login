@@ -31,12 +31,25 @@
     UIImage *image = [UIImage imageNamed:name];
     if (image != nil) return image;
 
-    NSString *bundlePath = [[NSBundle mainBundle] pathForResource:@"CHZLoginResources" ofType:@"bundle"];
-    NSBundle *resourceBundle = bundlePath.length ? [NSBundle bundleWithPath:bundlePath] : nil;
-    if (resourceBundle != nil) {
-        image = [UIImage imageNamed:name inBundle:resourceBundle compatibleWithTraitCollection:nil];
+    // O ESign pode renomear o bundle para CHZLoginResources 2.bundle.
+    // Procura todos os bundles CHZ e prefere a logo horizontal da referência.
+    NSArray<NSString *> *bundlePaths = [[NSBundle mainBundle] pathsForResourcesOfType:@"bundle" inDirectory:nil];
+    UIImage *bestImage = nil;
+    CGFloat bestScore = -1.0;
+    for (NSString *path in bundlePaths) {
+        NSString *filename = [[path lastPathComponent] stringByDeletingPathExtension];
+        if (![filename hasPrefix:@"CHZLoginResources"]) continue;
+        NSBundle *bundle = [NSBundle bundleWithPath:path];
+        UIImage *candidate = [UIImage imageNamed:name inBundle:bundle compatibleWithTraitCollection:nil];
+        if (candidate == nil) continue;
+        CGFloat aspect = candidate.size.height > 0.0 ? candidate.size.width / candidate.size.height : 0.0;
+        CGFloat score = (aspect > 1.15 ? 1000.0 : 0.0) + aspect;
+        if (score > bestScore) {
+            bestScore = score;
+            bestImage = candidate;
+        }
     }
-    return image;
+    return bestImage;
 }
 
 - (void)viewDidLoad {
@@ -141,7 +154,7 @@
     subtitle.tag = 7004;
     subtitle.text = @"Acesse sua conta";
     subtitle.textColor = self.chzMutedWhite;
-    subtitle.font = [UIFont systemFontOfSize:17.0 weight:UIFontWeightMedium];
+    subtitle.font = [UIFont systemFontOfSize:18.0 weight:UIFontWeightMedium];
     subtitle.textAlignment = NSTextAlignmentCenter;
     [self.view addSubview:subtitle];
 
@@ -156,7 +169,7 @@
     self.keyField.tag = 7007;
     self.keyField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:@"Digite sua key" attributes:@{NSForegroundColorAttributeName:[UIColor colorWithWhite:0.42 alpha:1.0]}];
     self.keyField.textColor = self.chzWhite;
-    self.keyField.font = [UIFont systemFontOfSize:18.0 weight:UIFontWeightMedium];
+    self.keyField.font = [UIFont systemFontOfSize:20.0 weight:UIFontWeightMedium];
     self.keyField.backgroundColor = [UIColor colorWithWhite:0.035 alpha:0.90];
     self.keyField.layer.cornerRadius = 17.0;
     self.keyField.layer.cornerCurve = kCACornerCurveContinuous;
@@ -201,7 +214,7 @@
     self.statusLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     self.statusLabel.tag = 7015;
     self.statusLabel.textColor = self.chzMutedWhite;
-    self.statusLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightMedium];
+    self.statusLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightMedium];
     self.statusLabel.textAlignment = NSTextAlignmentCenter;
     self.statusLabel.numberOfLines = 2;
     self.statusLabel.accessibilityIdentifier = @"chz.login.status";
@@ -211,7 +224,7 @@
     support.tag = 7010;
     support.text = @"SUPORTE";
     support.textColor = [UIColor colorWithWhite:0.50 alpha:1.0];
-    support.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightBold];
+    support.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightBold];
     support.textAlignment = NSTextAlignmentCenter;
     [self.view addSubview:support];
 
@@ -258,7 +271,7 @@
     button.backgroundColor = filled ? self.chzRed : [UIColor colorWithWhite:0.09 alpha:0.95];
     [button setTitle:title forState:UIControlStateNormal];
     [button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
-    button.titleLabel.font = [UIFont systemFontOfSize:(filled ? 19.0 : 17.0) weight:UIFontWeightBold];
+    button.titleLabel.font = [UIFont systemFontOfSize:(filled ? 21.0 : 19.0) weight:UIFontWeightBold];
     button.titleLabel.textAlignment = NSTextAlignmentCenter;
     if (filled) {
         button.layer.shadowColor = self.chzRed.CGColor;
@@ -319,7 +332,7 @@
     }
 
     UILabel *subtitle = (UILabel *)[self.view viewWithTag:7004];
-    subtitle.font = [UIFont systemFontOfSize:17.0 * scale weight:UIFontWeightMedium];
+    subtitle.font = [UIFont systemFontOfSize:18.0 * scale weight:UIFontWeightMedium];
     CGFloat logoBottom = logoView.image != nil ? CGRectGetMaxY(logoView.frame) : CGRectGetMaxY(chz.frame);
     subtitle.frame = CGRectMake(20.0, logoBottom + 13.0 * scale, W - 40.0, 25.0 * scale);
 
@@ -335,7 +348,7 @@
     CGFloat contentW = cardW - 2.0 * horizontalPadding;
     CGFloat fieldH = (tablet ? 80.0 : 54.0) * scale;
     UILabel *label = (UILabel *)[card viewWithTag:7006];
-    label.font = [UIFont systemFontOfSize:15.0 * scale weight:UIFontWeightBold];
+    label.font = [UIFont systemFontOfSize:17.0 * scale weight:UIFontWeightBold];
     label.frame = CGRectMake(horizontalPadding, (tablet ? 50.0 : 31.0) * scale, contentW, (tablet ? 30.0 : 24.0) * scale);
 
     UITextField *field = (UITextField *)[card viewWithTag:7007];
@@ -345,12 +358,12 @@
     UIButton *did = (UIButton *)[card viewWithTag:7008];
     did.frame = CGRectMake(horizontalPadding, (tablet ? 220.0 : 146.0) * scale, contentW, (tablet ? 76.0 : 52.0) * scale);
     did.layer.cornerRadius = (tablet ? 22.0 : 17.0) * scale;
-    did.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 24.0 : 17.0) * scale weight:UIFontWeightBold];
+    did.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 24.0 : 19.0) * scale weight:UIFontWeightBold];
 
     UIButton *login = (UIButton *)[card viewWithTag:7009];
     login.frame = CGRectMake(horizontalPadding, (tablet ? 330.0 : 213.0) * scale, contentW, (tablet ? 84.0 : 54.0) * scale);
     login.layer.cornerRadius = (tablet ? 22.0 : 17.0) * scale;
-    login.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 26.0 : 19.0) * scale weight:UIFontWeightBold];
+    login.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 26.0 : 21.0) * scale weight:UIFontWeightBold];
 
     UIActivityIndicatorView *indicator = (UIActivityIndicatorView *)[card viewWithTag:7014];
     indicator.center = CGPointMake(CGRectGetMidX(login.frame), CGRectGetMidY(login.frame));

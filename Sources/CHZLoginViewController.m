@@ -115,16 +115,26 @@
 
     UIView *card = [[UIView alloc] initWithFrame:CGRectZero];
     card.tag = 7005;
-    card.backgroundColor = [UIColor colorWithWhite:0.015 alpha:0.94];
+    card.backgroundColor = [UIColor colorWithWhite:0.02 alpha:0.52];
     card.layer.cornerRadius = 31.0;
     card.layer.cornerCurve = kCACornerCurveContinuous;
-    card.layer.borderWidth = 1.15;
-    card.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.88].CGColor;
+    card.layer.borderWidth = 1.0;
+    card.layer.borderColor = [UIColor colorWithWhite:0.95 alpha:0.22].CGColor;
     card.layer.shadowColor = self.chzRed.CGColor;
-    card.layer.shadowOpacity = 0.23;
-    card.layer.shadowRadius = 26.0;
+    card.layer.shadowOpacity = 0.16;
+    card.layer.shadowRadius = 28.0;
     card.layer.shadowOffset = CGSizeZero;
     [self.view addSubview:card];
+
+    UIBlurEffect *glassEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemChromeMaterialDark];
+    UIVisualEffectView *glass = [[UIVisualEffectView alloc] initWithEffect:glassEffect];
+    glass.tag = 7020;
+    glass.userInteractionEnabled = NO;
+    glass.layer.cornerRadius = 31.0;
+    glass.layer.cornerCurve = kCACornerCurveContinuous;
+    glass.clipsToBounds = YES;
+    glass.alpha = 0.82;
+    [card addSubview:glass];
 
     UILabel *chz = [[UILabel alloc] initWithFrame:CGRectZero];
     chz.tag = 7002;
@@ -170,11 +180,11 @@
     self.keyField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:@"Digite sua key" attributes:@{NSForegroundColorAttributeName:[UIColor colorWithWhite:0.42 alpha:1.0]}];
     self.keyField.textColor = self.chzWhite;
     self.keyField.font = [UIFont systemFontOfSize:20.0 weight:UIFontWeightMedium];
-    self.keyField.backgroundColor = [UIColor colorWithWhite:0.035 alpha:0.90];
+    self.keyField.backgroundColor = [UIColor colorWithWhite:0.12 alpha:0.38];
     self.keyField.layer.cornerRadius = 17.0;
     self.keyField.layer.cornerCurve = kCACornerCurveContinuous;
     self.keyField.layer.borderWidth = 1.0;
-    self.keyField.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.34].CGColor;
+    self.keyField.layer.borderColor = [UIColor colorWithWhite:0.95 alpha:0.24].CGColor;
     self.keyField.autocorrectionType = UITextAutocorrectionTypeNo;
     self.keyField.autocapitalizationType = UITextAutocapitalizationTypeNone;
     self.keyField.returnKeyType = UIReturnKeyDone;
@@ -267,15 +277,15 @@
     button.layer.cornerRadius = 17.0;
     button.layer.cornerCurve = kCACornerCurveContinuous;
     button.layer.borderWidth = 1.0;
-    button.layer.borderColor = filled ? self.chzRed.CGColor : [UIColor colorWithWhite:0.28 alpha:0.82].CGColor;
-    button.backgroundColor = filled ? self.chzRed : [UIColor colorWithWhite:0.09 alpha:0.95];
+    button.layer.borderColor = filled ? [UIColor colorWithWhite:1.0 alpha:0.28].CGColor : [UIColor colorWithWhite:0.92 alpha:0.22].CGColor;
+    button.backgroundColor = filled ? [self.chzRed colorWithAlphaComponent:0.88] : [UIColor colorWithWhite:0.16 alpha:0.45];
     [button setTitle:title forState:UIControlStateNormal];
     [button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
     button.titleLabel.font = [UIFont systemFontOfSize:(filled ? 21.0 : 19.0) weight:UIFontWeightBold];
     button.titleLabel.textAlignment = NSTextAlignmentCenter;
     if (filled) {
         button.layer.shadowColor = self.chzRed.CGColor;
-        button.layer.shadowOpacity = 0.30;
+        button.layer.shadowOpacity = 0.24;
         button.layer.shadowRadius = 13.0;
         button.layer.shadowOffset = CGSizeZero;
     }
@@ -353,6 +363,9 @@
     if (compact && !tablet) cardH = MIN(cardH, 326.0 * scale);
     UIView *card = [self.view viewWithTag:7005];
     card.frame = CGRectMake((W - cardW) / 2.0, cardY, cardW, cardH);
+    UIVisualEffectView *glass = (UIVisualEffectView *)[card viewWithTag:7020];
+    glass.frame = card.bounds;
+    glass.layer.cornerRadius = card.layer.cornerRadius;
 
     UILabel *label = (UILabel *)[card viewWithTag:7006];
     label.font = [UIFont systemFontOfSize:17.0 * scale weight:UIFontWeightBold];

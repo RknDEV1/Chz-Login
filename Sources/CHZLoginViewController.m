@@ -339,37 +339,47 @@
     CGFloat maxCardWidth = tablet ? 726.0 : 680.0;
     CGFloat sideInset = tablet ? 42.0 : 34.0;
     CGFloat cardW = MIN(W - 2.0 * sideInset, maxCardWidth);
-    CGFloat cardH = (tablet ? 560.0 : (compact ? 318.0 : 322.0)) * scale;
     CGFloat cardY = CGRectGetMaxY(subtitle.frame) + (tablet ? 64.0 : (compact ? 28.0 : 48.0)) * scale;
+    CGFloat horizontalPadding = (tablet ? 48.0 : (compact ? 30.0 : 38.0)) * scale;
+    CGFloat contentW = cardW - 2.0 * horizontalPadding;
+    CGFloat cardTop = (tablet ? 50.0 : 31.0) * scale;
+    CGFloat labelH = (tablet ? 30.0 : 24.0) * scale;
+    CGFloat gapAfterLabel = (tablet ? 28.0 : 22.0) * scale;
+    CGFloat fieldH = (tablet ? 80.0 : 56.0) * scale;
+    CGFloat controlGap = (tablet ? 24.0 : 16.0) * scale;
+    CGFloat didH = (tablet ? 76.0 : 56.0) * scale;
+    CGFloat loginH = (tablet ? 84.0 : 58.0) * scale;
+    CGFloat cardH = cardTop + labelH + gapAfterLabel + fieldH + controlGap + didH + controlGap + loginH + (tablet ? 42.0 : 32.0) * scale;
+    if (compact && !tablet) cardH = MIN(cardH, 326.0 * scale);
     UIView *card = [self.view viewWithTag:7005];
     card.frame = CGRectMake((W - cardW) / 2.0, cardY, cardW, cardH);
 
-    CGFloat horizontalPadding = (tablet ? 48.0 : (compact ? 30.0 : 38.0)) * scale;
-    CGFloat contentW = cardW - 2.0 * horizontalPadding;
-    CGFloat fieldH = (tablet ? 80.0 : 54.0) * scale;
     UILabel *label = (UILabel *)[card viewWithTag:7006];
     label.font = [UIFont systemFontOfSize:17.0 * scale weight:UIFontWeightBold];
-    label.frame = CGRectMake(horizontalPadding, (tablet ? 50.0 : 31.0) * scale, contentW, (tablet ? 30.0 : 24.0) * scale);
+    label.frame = CGRectMake(horizontalPadding, cardTop, contentW, labelH);
 
     UITextField *field = (UITextField *)[card viewWithTag:7007];
-    field.frame = CGRectMake(horizontalPadding, (tablet ? 108.0 : 78.0) * scale, contentW, fieldH);
-    field.layer.cornerRadius = 17.0 * scale;
+    CGFloat fieldY = CGRectGetMaxY(label.frame) + gapAfterLabel;
+    field.frame = CGRectMake(horizontalPadding, fieldY, contentW, fieldH);
+    field.layer.cornerRadius = 18.0 * scale;
 
     UIButton *did = (UIButton *)[card viewWithTag:7008];
-    did.frame = CGRectMake(horizontalPadding, (tablet ? 220.0 : 146.0) * scale, contentW, (tablet ? 76.0 : 52.0) * scale);
-    did.layer.cornerRadius = (tablet ? 22.0 : 17.0) * scale;
+    CGFloat didY = CGRectGetMaxY(field.frame) + controlGap;
+    did.frame = CGRectMake(horizontalPadding, didY, contentW, didH);
+    did.layer.cornerRadius = (tablet ? 22.0 : 18.0) * scale;
     did.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 24.0 : 19.0) * scale weight:UIFontWeightBold];
 
     UIButton *login = (UIButton *)[card viewWithTag:7009];
-    login.frame = CGRectMake(horizontalPadding, (tablet ? 330.0 : 213.0) * scale, contentW, (tablet ? 84.0 : 54.0) * scale);
-    login.layer.cornerRadius = (tablet ? 22.0 : 17.0) * scale;
+    CGFloat loginY = CGRectGetMaxY(did.frame) + controlGap;
+    login.frame = CGRectMake(horizontalPadding, loginY, contentW, loginH);
+    login.layer.cornerRadius = (tablet ? 22.0 : 18.0) * scale;
     login.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 26.0 : 21.0) * scale weight:UIFontWeightBold];
 
     UIActivityIndicatorView *indicator = (UIActivityIndicatorView *)[card viewWithTag:7014];
     indicator.center = CGPointMake(CGRectGetMidX(login.frame), CGRectGetMidY(login.frame));
 
     UILabel *status = (UILabel *)[card viewWithTag:7015];
-    status.frame = CGRectMake(horizontalPadding, CGRectGetMaxY(login.frame) + (tablet ? 12.0 : 7.0) * scale, contentW, (tablet ? 32.0 : 26.0) * scale);
+    status.frame = CGRectMake(horizontalPadding, CGRectGetMaxY(login.frame) + (tablet ? 12.0 : 8.0) * scale, contentW, (tablet ? 34.0 : 28.0) * scale);
 
     UILabel *support = (UILabel *)[self.view viewWithTag:7010];
     UIView *leftLine = [self.view viewWithTag:7011];

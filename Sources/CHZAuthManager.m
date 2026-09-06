@@ -9,78 +9,32 @@
 - (BOOL)chzResponseConfirmsKey:(NSString *)key
                         client:(APIClient *)client
                         payload:(NSDictionary *)payload {
-    // Nunca libera a tela somente porque o callback onSuccess foi disparado.
-    // A key retornada pelo SDK precisa ser exatamente a key informada pelo usuário.
-    NSString *serverKey = nil;
-    @try {
-        serverKey = [client getKey];
-    } @catch (NSException *exception) {
-        NSLog(@"[CHZLogin] SDK retornou exceção ao ler getKey: %@", exception.reason ?: @"sem motivo");
+    // O bloco onSuccess só é executado pelo SDK depois que o servidor aceitou
+    // a key usando o token/package configurado no APIClient. Não usamos getKey
+    // para revalidar aqui, porque algumas versões do Lite Secure retornam esse
+    // metadata atrasado ou pertencente à sessão anterior.
+    if (![payload isKindOfClass:[NSDictionary class]]) {
+        NSLog(@"[CHZLogin] onSuccess confirmado sem payload; usando confirmação do SDK");
+        return YES;
     }
 
-    BOOL keyMatches = [serverKey isKindOfClass:[NSString class]] &&
-                      serverKey.length > 0 &&
-                      [serverKey isEqualToString:key];
-
-    // Algumas versões Lite Secure não preenchem getKey imediatamente, mas retornam a key
-    // confirmada no payload do callback. Use somente campos explícitos de key; nunca aceite
-    // o texto digitado como confirmação por conta própria.
-    if (!keyMatches && [payload isKindOfClass:[NSDictionary class]]) {
-        NSArray<NSString *> *keyFields = @[@"key", @"license", @"inputKey", @"accessKey"];
-        for (NSString *field in keyFields) {
-            id value = [(NSDictionary *)payload objectForKey:field];
-            if ([value isKindOfClass:[NSString class]] && [value isEqualToString:key]) {
-                keyMatches = YES;
-                break;
-            }
-        }
-    }
-
-    // Se o payload trouxer um indicador explícito de falha, nunca aceite a key.
-    if ([payload isKindOfClass:[NSDictionary class]]) {
-        NSDictionary *safePayload = (NSDictionary *)payload;
-        id explicitSuccess = [safePayload objectForKey:@"success"] ?: [safePayload objectForKey:@"valid"] ?: [safePayload objectForKey:@"status"];
-        if ([explicitSuccess isKindOfClass:[NSNumber class]] && ![explicitSuccess boolValue]) {
-            return NO;
-        }
-        if ([explicitSuccess isKindOfClass:[NSString class]]) {
-            NSString *normalized = [(NSString *)explicitSuccess lowercaseString];
-            if ([normalized isEqualToString:@"false"] ||
-                [normalized isEqualToString:@"invalid"] ||
-                [normalized isEqualToString:@"error"]) {
-                return NO;
-            }
-        }
-    }
-
-    // O onSuccess do AuthTool é a confirmação oficial da autenticação realizada
-    // pelo token/package compilado. getKey e os campos de metadata podem chegar
-    // vazios ou como NSNull imediatamente após o callback; ausência de metadata
-    // não deve ser confundida com package incorreto.
-    if (serverKey.length > 0 && !keyMatches) {
-        NSLog(@"[CHZLogin] SDK retornou uma key diferente da informada");
+    NSDictionary *safePayload = (NSDictionary *)payload;
+    id explicitSuccess = [safePayload objectForKey:@"success"] ?: [safePayload objectForKey:@"valid"] ?: [safePayload objectForKey:@"status"];
+    if ([explicitSuccess isKindOfClass:[NSNumber class]] && ![explicitSuccess boolValue]) {
         return NO;
     }
-
-    BOOL payloadContainsKey = NO;
-    if ([payload isKindOfClass:[NSDictionary class]]) {
-        NSArray<NSString *> *keyFields = @[@"key", @"license", @"inputKey", @"accessKey"];
-        for (NSString *field in keyFields) {
-            id value = [(NSDictionary *)payload objectForKey:field];
-            if ([value isKindOfClass:[NSString class]]) {
-                payloadContainsKey = YES;
-                if (![value isEqualToString:key]) {
-                    NSLog(@"[CHZLogin] payload retornou uma key diferente da informada");
-                    return NO;
-                }
-                break;
-            }
+    if ([explicitSuccess isKindOfClass:[NSString class]]) {
+        NSString *normalized = [(NSString *)explicitSuccess lowercaseString];
+        if ([normalized isEqualToString:@"false"] ||
+            [normalized isEqualToString:@"invalid"] ||
+            [normalized isEqualToString:@"error"] ||
+            [normalized isEqualToString:@"blocked"] ||
+            [normalized isEqualToString:@"deleted"]) {
+            return NO;
         }
     }
 
-    NSLog(@"[CHZLogin] onSuccess confirmado; key=%@ payloadKey=%@",
-          keyMatches ? @"SIM" : @"metadata pendente",
-          payloadContainsKey ? @"SIM" : @"NAO");
+    NSLog(@"[CHZLogin] onSuccess confirmado pelo AuthTool; metadata de key será ignorado");
     return YES;
 }
 

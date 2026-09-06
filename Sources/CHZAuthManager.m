@@ -1,6 +1,5 @@
 #import "CHZAuthManager.h"
 #import <UIKit/UIKit.h>
-#import "CHZKeychain.h"
 #import "APIClient.h"
 #import "CHZSecrets.h"
 
@@ -75,23 +74,14 @@
     APIClient *client = [APIClient sharedAPIClient];
 
     [client onLogin:trimmedKey
-          onSuccess:^(NSDictionary *data) {
-        NSError *saveError = nil;
-        BOOL saved = [CHZKeychain saveKey:trimmedKey error:&saveError];
-
+          onSuccess:^(__unused NSDictionary *data) {
+        // A key válida não é persistida localmente. O callback oficial do servidor
+        // é a única condição que libera o fluxo da tela.
         dispatch_async(dispatch_get_main_queue(), ^{
-            if (!saved) {
-                if (failure) {
-                    failure(saveError.localizedDescription ?: @"Não foi possível salvar a key.");
-                }
-            } else if (success) {
-                success();
-            }
+            if (success) success();
         });
     }
           onFailure:^(NSDictionary *error) {
-        [CHZKeychain deleteKey:nil];
-
         NSString *message = @"Key recusada pela API.";
 
         if ([error isKindOfClass:[NSDictionary class]]) {

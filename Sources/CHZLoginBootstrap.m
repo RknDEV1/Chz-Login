@@ -4,6 +4,7 @@
 #import "CHZLoginViewController.h"
 
 static BOOL CHZLoginWasPresented = NO;
+static BOOL CHZPresentationInFlight = NO;
 static NSUInteger CHZPresentationAttempts = 0;
 static const NSUInteger CHZMaximumPresentationAttempts = 120;
 
@@ -73,12 +74,18 @@ static void CHZScheduleAnotherPresentationAttempt(void) {
 }
 
 static void CHZTryPresentLogin(void) {
-    if (CHZLoginWasPresented) return;
+    if (CHZLoginWasPresented || CHZPresentationInFlight) return;
     CHZPresentationAttempts += 1;
 
     UIWindow *window = CHZActiveWindow();
+    if (!window) {
+        if (CHZPresentationAttempts == 1) NSLog(@"[CHZLogin] nenhuma UIWindow ativa encontrada");
+        CHZScheduleAnotherPresentationAttempt();
+        return;
+    }
+
     UIViewController *root = window.rootViewController;
-    if (!window || !root || !root.viewIfLoaded.window) {
+    if (!root || !root.viewIfLoaded.window) {
         CHZScheduleAnotherPresentationAttempt();
         return;
     }
@@ -97,19 +104,40 @@ static void CHZTryPresentLogin(void) {
 
     CHZLoginViewController *login = [[CHZLoginViewController alloc] init];
     login.modalPresentationStyle = UIModalPresentationFullScreen;
-    CHZLoginWasPresented = YES;
+    CHZPresentationInFlight = YES;
 
     [top presentViewController:login animated:NO completion:^{
-        NSLog(@"[CHZLogin] tela de login apresentada na inicialização");
+        CHZPresentationInFlight = NO;
+        if (login.presentingViewController != nil) {
+            CHZLoginWasPresented = YES;
+            NSLog(@"[CHZLogin] tela de login apresentada na inicialização");
+        } else {
+            CHZLoginWasPresented = NO;
+            NSLog(@"[CHZLogin] apresentação não confirmou; nova tentativa será agendada");
+            CHZScheduleAnotherPresentationAttempt();
+        }
     }];
 }
 
 static void CHZStartLoginPresentation(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
-        [[NSNotificationCenter defaultCenter] addObserverForName:UISceneDidActivateNotification
-                                                            object:nil
-                                                             queue:[NSOperationQueue mainQueue]
-                                                        usingBlock:^(__unused NSNotification *notification) {
+        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        [center addObserverForName:UISceneDidActivateNotification
+                            object:nil
+                             queue:[NSOperationQueue mainQueue]
+                        usingBlock:^(__unused NSNotification *notification) {
+            CHZTryPresentLogin();
+        }];
+        [center addObserverForName:UIApplicationDidBecomeActiveNotification
+                            object:nil
+                             queue:[NSOperationQueue mainQueue]
+                        usingBlock:^(__unused NSNotification *notification) {
+            CHZTryPresentLogin();
+        }];
+        [center addObserverForName:UIWindowDidBecomeKeyNotification
+                            object:nil
+                             queue:[NSOperationQueue mainQueue]
+                        usingBlock:^(__unused NSNotification *notification) {
             CHZTryPresentLogin();
         }];
 

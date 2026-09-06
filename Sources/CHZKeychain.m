@@ -4,6 +4,7 @@
 static NSString * const CHZKeychainService = @"com.chzpriv.login";
 static NSString * const CHZKeychainAccount = @"validated_key";
 static NSString * const CHZKeychainSessionAccount = @"validated_session_v1";
+static NSString * const CHZLocalSessionMarker = @"com.chzpriv.login.session_available";
 
 @interface CHZKeychain ()
 + (NSMutableDictionary *)queryForAccount:(NSString *)account;
@@ -89,7 +90,10 @@ static NSString * const CHZKeychainSessionAccount = @"validated_session_v1";
     if (status == errSecItemNotFound) {
         status = SecItemAdd((__bridge CFDictionaryRef)query, NULL);
     }
-    if (status != errSecSuccess && error) {
+    if (status == errSecSuccess) {
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:CHZLocalSessionMarker];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+    } else if (error) {
         *error = [NSError errorWithDomain:@"CHZKeychain" code:status userInfo:nil];
     }
     return status == errSecSuccess;
@@ -116,6 +120,8 @@ static NSString * const CHZKeychainSessionAccount = @"validated_session_v1";
 + (BOOL)deleteKey:(NSError **)error {
     OSStatus status = SecItemDelete((__bridge CFDictionaryRef)[self baseQuery]);
     OSStatus sessionStatus = SecItemDelete((__bridge CFDictionaryRef)[self queryForAccount:CHZKeychainSessionAccount]);
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:CHZLocalSessionMarker];
+    [[NSUserDefaults standardUserDefaults] synchronize];
     if (status == errSecItemNotFound) status = errSecSuccess;
     if (sessionStatus != errSecSuccess && sessionStatus != errSecItemNotFound) status = sessionStatus;
     if (status != errSecSuccess && status != errSecItemNotFound && error) {

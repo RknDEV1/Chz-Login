@@ -122,7 +122,6 @@ jobs:
             -Wl,-S \
             -Wl,-install_name,@executable_path/CHZLogin.dylib \
             build/obj/CHZAuthManager.o \
-            build/obj/CHZKeychain.o \
             build/obj/CHZLoginViewController.o \
             build/obj/CHZLoginBootstrap.o \
             Vendor/API/libAPIClient.a \

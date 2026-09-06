@@ -113,25 +113,36 @@
         if (timestamp != nil) date = [NSDate dateWithTimeIntervalSince1970:timestamp.doubleValue];
     }
     if (!date) {
-        NSDateFormatter *fallback = [[NSDateFormatter alloc] init];
-        fallback.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
-        fallback.timeZone = [NSTimeZone timeZoneForSecondsFromGMT:0];
-        fallback.dateFormat = @"yyyy-MM-dd HH:mm:ss";
-        date = [fallback dateFromString:value];
+        NSArray<NSString *> *formats = @[
+            @"yyyy-MM-dd HH:mm:ss Z",
+            @"yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX",
+            @"yyyy-MM-dd'T'HH:mm:ssXXXXX",
+            @"yyyy-MM-dd"
+        ];
+        for (NSString *format in formats) {
+            NSDateFormatter *fallback = [[NSDateFormatter alloc] init];
+            fallback.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+            fallback.timeZone = [NSTimeZone timeZoneForSecondsFromGMT:0];
+            fallback.dateFormat = format;
+            date = [fallback dateFromString:value];
+            if (date) break;
+        }
     }
     return date;
 }
 
 - (BOOL)hasValidSavedSession {
     NSDictionary *session = [CHZKeychain loadSession:nil];
-    NSString *key = session[@"key"];
-    NSString *expiry = session[@"expiry"];
+    NSString *key = [session objectForKey:@"key"];
+    NSString *expiry = [session objectForKey:@"expiry"];
     NSDate *expirationDate = [self chzDateFromExpiryString:expiry];
 
     if (![key isKindOfClass:[NSString class]] || key.length == 0 || !expirationDate || [expirationDate timeIntervalSinceNow] <= 0.0) {
+        NSLog(@"[CHZLogin] sessão local ausente, inválida ou expirada; login será apresentado");
         if (session) [CHZKeychain deleteKey:nil];
         return NO;
     }
+    NSLog(@"[CHZLogin] sessão local válida; expira em %@", expirationDate);
     return YES;
 }
 

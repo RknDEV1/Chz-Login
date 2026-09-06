@@ -38,7 +38,7 @@
     return YES;
 }
 
-- (NSString *)chzSafeExpiryDateFromClient:(APIClient *)client payload:(NSDictionary *)payload {
+- (NSString *)chzSafeExpiryDateFromClient:(APIClient *)client key:(NSString *)key payload:(NSDictionary *)payload {
     NSString *expiry = nil;
     @try {
         expiry = [client getExpiryDate];
@@ -49,8 +49,8 @@
         NSLog(@"[CHZLogin] não foi possível ler a expiração: %@", exception.reason ?: @"sem motivo");
     }
 
+    NSArray<NSString *> *fields = @[@"expiry", @"expiresAt", @"expiredAt", @"expiration", @"expiryDate"];
     if (![expiry isKindOfClass:[NSString class]] || expiry.length == 0) {
-        NSArray<NSString *> *fields = @[@"expiry", @"expiresAt", @"expiredAt", @"expiration", @"expiryDate"];
         for (NSString *field in fields) {
             id value = [payload isKindOfClass:[NSDictionary class]] ? [(NSDictionary *)payload objectForKey:field] : nil;
             if ([value isKindOfClass:[NSString class]] && [value length] > 0) {
@@ -61,6 +61,29 @@
                 expiry = [(NSNumber *)value stringValue];
                 break;
             }
+        }
+    }
+
+    // Algumas versões do SDK só expõem a expiração no objeto de dados do pacote.
+    // A leitura é protegida e o retorno é tratado como dado não confiável.
+    if (![expiry isKindOfClass:[NSString class]] || expiry.length == 0) {
+        @try {
+            id packageData = [client getPackageDataWithKey:key];
+            if ([packageData isKindOfClass:[NSDictionary class]]) {
+                for (NSString *field in fields) {
+                    id value = [(NSDictionary *)packageData objectForKey:field];
+                    if ([value isKindOfClass:[NSString class]] && [value length] > 0) {
+                        expiry = value;
+                        break;
+                    }
+                    if ([value isKindOfClass:[NSNumber class]]) {
+                        expiry = [(NSNumber *)value stringValue];
+                        break;
+                    }
+                }
+            }
+        } @catch (NSException *exception) {
+            NSLog(@"[CHZLogin] não foi possível ler os dados do pacote: %@", exception.reason ?: @"sem motivo");
         }
     }
 
@@ -183,12 +206,16 @@
         }
         dispatch_async(dispatch_get_main_queue(), ^{
             if (confirmed) {
-                NSString *expiry = [self chzSafeExpiryDateFromClient:client payload:data];
+                NSString *expiry = [self chzSafeExpiryDateFromClient:client key:trimmedKey payload:data];
                 NSError *saveError = nil;
+                BOOL saved = NO;
                 if (expiry.length > 0) {
-                    [CHZKeychain saveSessionForKey:trimmedKey expiry:expiry error:&saveError];
+                    saved = [CHZKeychain saveSessionForKey:trimmedKey expiry:expiry error:&saveError];
                 }
-                NSLog(@"[CHZLogin] sessão salva; expiração=%@", expiry.length > 0 ? expiry : @"não disponível");
+                NSLog(@"[CHZLogin] sessão salva=%@; expiração=%@; erro=%@",
+                      saved ? @"SIM" : @"NAO",
+                      expiry.length > 0 ? expiry : @"não disponível",
+                      saveError.localizedDescription ?: @"nenhum");
                 if (success) success();
             } else if (failure) {
                 failure(@"A key não pertence ao package autorizado ou foi recusada pela API.");

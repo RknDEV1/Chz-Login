@@ -45,18 +45,14 @@
         }
     }
 
-    id packageData = [client getPackageDataWithKey:key];
-    BOOL hasPackageData = packageData != nil && packageData != [NSNull null];
-    if (!keyMatches && !hasPackageData) {
-        NSLog(@"[CHZLogin] sucesso sem confirmação de key ou dados do package");
+    if (!keyMatches) {
+        NSLog(@"[CHZLogin] sucesso sem confirmação explícita da key");
         return NO;
     }
 
-    NSString *packageName = [client getPackageName];
-    NSLog(@"[CHZLogin] resposta confirmou a key; key=%@ package=%@ dados=%@",
-          keyMatches ? @"SIM" : @"NAO",
-          ([packageName isKindOfClass:[NSString class]] && packageName.length > 0) ? @"SIM" : @"NAO",
-          hasPackageData ? @"SIM" : @"NAO");
+    // O package autorizado já é definido pelo token privado compilado no build.
+    // Evitamos novas consultas síncronas ao SDK durante o callback de login.
+    NSLog(@"[CHZLogin] resposta confirmou a key; prosseguindo sem consultas adicionais");
     return YES;
 }
 

@@ -11,6 +11,7 @@
 @property (nonatomic, strong) UILabel *statusLabel;
 @property (nonatomic, strong) CAGradientLayer *topGradient;
 @property (nonatomic, strong) CAGradientLayer *bottomGradient;
+@property (nonatomic, assign) BOOL loginFinishing;
 @end
 
 @implementation CHZLoginViewController
@@ -444,6 +445,7 @@
         return;
     }
 
+    self.loginFinishing = NO;
     sender.enabled = NO;
     self.keyField.enabled = NO;
     self.didButton.enabled = NO;
@@ -460,6 +462,7 @@
     } failure:^(NSString *message) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [self.activityIndicator stopAnimating];
+            self.loginFinishing = NO;
             sender.enabled = YES;
             self.keyField.enabled = YES;
             self.didButton.enabled = YES;
@@ -477,12 +480,23 @@
 }
 
 - (void)finishLogin {
-    self.loginButton.enabled = YES;
-    self.keyField.enabled = YES;
-    self.didButton.enabled = YES;
+    if (self.loginFinishing || self.presentingViewController == nil) {
+        return;
+    }
+
+    self.loginFinishing = YES;
+    self.loginButton.enabled = NO;
+    self.keyField.enabled = NO;
+    self.didButton.enabled = NO;
     self.statusLabel.text = @"Acesso autorizado.";
     self.statusLabel.textColor = [UIColor colorWithRed:0.25 green:0.90 blue:0.55 alpha:1.0];
-    [self dismissViewControllerAnimated:YES completion:nil];
+
+    // A transição precisa ocorrer na main thread e somente uma vez.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.presentingViewController != nil && !self.isBeingDismissed) {
+            [self dismissViewControllerAnimated:YES completion:nil];
+        }
+    });
 }
 
 @end

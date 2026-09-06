@@ -29,8 +29,6 @@
         }
     }
 
-    if (!keyMatches) return NO;
-
     // Se o payload trouxer um indicador explícito de falha, nunca aceite a key.
     if ([payload isKindOfClass:[NSDictionary class]]) {
         id explicitSuccess = payload[@"success"] ?: payload[@"valid"] ?: payload[@"status"];
@@ -47,9 +45,18 @@
         }
     }
 
+    id packageData = [client getPackageDataWithKey:key];
+    BOOL hasPackageData = packageData != nil && packageData != [NSNull null];
+    if (!keyMatches && !hasPackageData) {
+        NSLog(@"[CHZLogin] sucesso sem confirmação de key ou dados do package");
+        return NO;
+    }
+
     NSString *packageName = [client getPackageName];
-    NSLog(@"[CHZLogin] resposta confirmou a key; package recebido: %@",
-          ([packageName isKindOfClass:[NSString class]] && packageName.length > 0) ? @"SIM" : @"NAO");
+    NSLog(@"[CHZLogin] resposta confirmou a key; key=%@ package=%@ dados=%@",
+          keyMatches ? @"SIM" : @"NAO",
+          ([packageName isKindOfClass:[NSString class]] && packageName.length > 0) ? @"SIM" : @"NAO",
+          hasPackageData ? @"SIM" : @"NAO");
     return YES;
 }
 

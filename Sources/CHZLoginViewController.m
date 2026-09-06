@@ -153,7 +153,7 @@
     [self.view addSubview:priv];
 
     // Usa a logo brush/grafite transparente enviada pelo usuário como referência final.
-    self.logoView = [[UIImageView alloc] initWithImage:[self chzImageNamed:@"CHZPrivLogo"]];
+    self.logoView = [[UIImageView alloc] initWithImage:[self chzImageNamed:@"CHZPrivLogoFinal"]];
     self.logoView.tag = 7016;
     self.logoView.contentMode = UIViewContentModeScaleAspectFit;
     self.logoView.hidden = (self.logoView.image == nil);

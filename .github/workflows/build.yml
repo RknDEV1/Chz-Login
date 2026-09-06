@@ -91,7 +91,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/CHZLoginResources.bundle
-          cp Resources/CHZPrivLogo.png build/CHZLoginResources.bundle/CHZPrivLogo.png
+          cp Resources/CHZPrivLogoFinal.png build/CHZLoginResources.bundle/CHZPrivLogoFinal.png
           cp Resources/discord.png build/CHZLoginResources.bundle/discord.png
           cat > build/CHZLoginResources.bundle/Info.plist <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
@@ -103,7 +103,7 @@ jobs:
           </dict></plist>
           PLIST
           ditto -c -k --sequesterRsrc --keepParent build/CHZLoginResources.bundle build/CHZLoginResources.bundle.zip
-          test -s build/CHZLoginResources.bundle/CHZPrivLogo.png
+          test -s build/CHZLoginResources.bundle/CHZPrivLogoFinal.png
           test -s build/CHZLoginResources.bundle/discord.png
 
       - name: Compilar dylib arm64

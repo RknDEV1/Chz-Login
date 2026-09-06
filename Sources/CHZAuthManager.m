@@ -52,14 +52,34 @@
         }
     }
 
-    if (!keyMatches) {
-        NSLog(@"[CHZLogin] sucesso sem confirmação explícita da key");
+    // O onSuccess do AuthTool é a confirmação oficial da autenticação realizada
+    // pelo token/package compilado. getKey e os campos de metadata podem chegar
+    // vazios ou como NSNull imediatamente após o callback; ausência de metadata
+    // não deve ser confundida com package incorreto.
+    if (serverKey.length > 0 && !keyMatches) {
+        NSLog(@"[CHZLogin] SDK retornou uma key diferente da informada");
         return NO;
     }
 
-    // O package autorizado já é definido pelo token privado compilado no build.
-    // Evitamos novas consultas síncronas ao SDK durante o callback de login.
-    NSLog(@"[CHZLogin] resposta confirmou a key; prosseguindo sem consultas adicionais");
+    BOOL payloadContainsKey = NO;
+    if ([payload isKindOfClass:[NSDictionary class]]) {
+        NSArray<NSString *> *keyFields = @[@"key", @"license", @"inputKey", @"accessKey"];
+        for (NSString *field in keyFields) {
+            id value = [(NSDictionary *)payload objectForKey:field];
+            if ([value isKindOfClass:[NSString class]]) {
+                payloadContainsKey = YES;
+                if (![value isEqualToString:key]) {
+                    NSLog(@"[CHZLogin] payload retornou uma key diferente da informada");
+                    return NO;
+                }
+                break;
+            }
+        }
+    }
+
+    NSLog(@"[CHZLogin] onSuccess confirmado; key=%@ payloadKey=%@",
+          keyMatches ? @"SIM" : @"metadata pendente",
+          payloadContainsKey ? @"SIM" : @"NAO");
     return YES;
 }
 

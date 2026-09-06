@@ -201,7 +201,7 @@
     self.keyField.leftViewMode = UITextFieldViewModeAlways;
     [card addSubview:self.keyField];
 
-    self.didButton = [self makeButton:@"OBTER DID" filled:NO action:@selector(didTapped:)];
+    self.didButton = [self makeButton:@"OBTER UDID" filled:NO action:@selector(didTapped:)];
     self.didButton.tag = 7008;
     UIImage *didIcon = [UIImage systemImageNamed:@"doc.on.clipboard"];
     if (didIcon) {
@@ -429,14 +429,12 @@
 - (BOOL)textFieldShouldReturn:(UITextField *)textField { [textField resignFirstResponder]; return YES; }
 
 - (void)didTapped:(__unused UIButton *)sender {
-    NSString *did = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
-    if (did.length == 0) return;
-    [UIPasteboard generalPasteboard].string = did;
-    UINotificationFeedbackGenerator *feedback = [[UINotificationFeedbackGenerator alloc] init];
-    [feedback notificationOccurred:UINotificationFeedbackTypeSuccess];
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"DID copiado" message:@"O identificador do dispositivo foi copiado para a área de transferência." preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-    [self presentViewController:alert animated:YES completion:nil];
+    NSURL *url = [NSURL URLWithString:@"https://udid.baontq.xyz/udid.php?id=23741&openurl=(null)"];
+    if (!url) return;
+    UIApplication *application = UIApplication.sharedApplication;
+    if ([application canOpenURL:url]) {
+        [application openURL:url options:@{} completionHandler:nil];
+    }
 }
 
 - (void)loginTapped:(UIButton *)sender {

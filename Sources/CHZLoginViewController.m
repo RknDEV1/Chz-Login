@@ -117,7 +117,7 @@
     chz.tag = 7002;
     chz.text = @"CHZ";
     chz.textColor = self.chzRed;
-    chz.font = [UIFont italicSystemFontOfSize:52.0];
+    chz.font = [UIFont fontWithName:@"HelveticaNeue-BoldItalic" size:52.0] ?: [UIFont italicSystemFontOfSize:52.0];
     chz.textAlignment = NSTextAlignmentRight;
     [self.view addSubview:chz];
 
@@ -125,14 +125,15 @@
     priv.tag = 7003;
     priv.text = @"PRIV";
     priv.textColor = self.chzWhite;
-    priv.font = [UIFont italicSystemFontOfSize:52.0];
+    priv.font = [UIFont fontWithName:@"HelveticaNeue-BoldItalic" size:52.0] ?: [UIFont italicSystemFontOfSize:52.0];
     priv.textAlignment = NSTextAlignmentLeft;
     [self.view addSubview:priv];
 
-    // O wordmark textual reproduz a referência CHZ PRIV sem o quadrado branco do asset antigo.
-    self.logoView = [[UIImageView alloc] initWithFrame:CGRectZero];
+    // Usa a logo brush/grafite transparente enviada pelo usuário como referência final.
+    self.logoView = [[UIImageView alloc] initWithImage:[self chzImageNamed:@"CHZPrivLogo"]];
     self.logoView.tag = 7016;
-    self.logoView.hidden = YES;
+    self.logoView.contentMode = UIViewContentModeScaleAspectFit;
+    self.logoView.hidden = (self.logoView.image == nil);
     self.logoView.accessibilityLabel = @"CHZ PRIV";
     [self.view addSubview:self.logoView];
 
@@ -291,38 +292,46 @@
     glow.layer.borderWidth = 0.0;
     glow.layer.shadowOpacity = 0.0;
 
-    CGFloat logoY = safeTop + (tablet ? 54.0 : 42.0) * scale;
+    CGFloat logoY = safeTop + (tablet ? 72.0 : 86.0) * scale;
     CGFloat logoW = MIN(W * (tablet ? 0.70 : 0.70), tablet ? 560.0 : 350.0);
     CGFloat wordH = (tablet ? 86.0 : 58.0) * scale;
     UILabel *chz = (UILabel *)[self.view viewWithTag:7002];
     UILabel *priv = (UILabel *)[self.view viewWithTag:7003];
     CGFloat wordSize = (tablet ? 76.0 : 52.0) * scale;
-    chz.font = [UIFont italicSystemFontOfSize:wordSize];
-    priv.font = [UIFont italicSystemFontOfSize:wordSize];
+    chz.font = [UIFont fontWithName:@"HelveticaNeue-BoldItalic" size:wordSize] ?: [UIFont italicSystemFontOfSize:wordSize];
+    priv.font = [UIFont fontWithName:@"HelveticaNeue-BoldItalic" size:wordSize] ?: [UIFont italicSystemFontOfSize:wordSize];
     CGFloat wordX = (W - logoW) / 2.0;
     chz.frame = CGRectMake(wordX, logoY, logoW * 0.43, wordH);
     priv.frame = CGRectMake(wordX + logoW * 0.39, logoY, logoW * 0.61, wordH);
     UIImageView *logoView = (UIImageView *)[self.view viewWithTag:7016];
-    // Mantém o nome CHZ PRIV visível em todos os aparelhos, sem depender do asset quadrado.
-    chz.hidden = NO;
-    priv.hidden = NO;
-    logoView.hidden = YES;
-    logoView.frame = CGRectZero;
+    // A logo enviada é o wordmark final; os labels ficam como fallback somente se o asset não carregar.
+    if (logoView.image != nil) {
+        chz.hidden = YES;
+        priv.hidden = YES;
+        logoView.hidden = NO;
+        CGFloat logoH = logoW * (857.0 / 1181.0);
+        logoView.frame = CGRectMake((W - logoW) / 2.0, logoY, logoW, logoH);
+    } else {
+        chz.hidden = NO;
+        priv.hidden = NO;
+        logoView.hidden = YES;
+        logoView.frame = CGRectZero;
+    }
 
     UILabel *subtitle = (UILabel *)[self.view viewWithTag:7004];
     subtitle.font = [UIFont systemFontOfSize:17.0 * scale weight:UIFontWeightMedium];
-    CGFloat logoBottom = CGRectGetMaxY(chz.frame);
+    CGFloat logoBottom = logoView.image != nil ? CGRectGetMaxY(logoView.frame) : CGRectGetMaxY(chz.frame);
     subtitle.frame = CGRectMake(20.0, logoBottom + 13.0 * scale, W - 40.0, 25.0 * scale);
 
     CGFloat maxCardWidth = tablet ? 726.0 : 680.0;
-    CGFloat sideInset = tablet ? 42.0 : 21.0;
+    CGFloat sideInset = tablet ? 42.0 : 34.0;
     CGFloat cardW = MIN(W - 2.0 * sideInset, maxCardWidth);
     CGFloat cardH = (tablet ? 560.0 : (compact ? 318.0 : 322.0)) * scale;
-    CGFloat cardY = CGRectGetMaxY(subtitle.frame) + (tablet ? 64.0 : (compact ? 23.0 : 39.0)) * scale;
+    CGFloat cardY = CGRectGetMaxY(subtitle.frame) + (tablet ? 64.0 : (compact ? 28.0 : 48.0)) * scale;
     UIView *card = [self.view viewWithTag:7005];
     card.frame = CGRectMake((W - cardW) / 2.0, cardY, cardW, cardH);
 
-    CGFloat horizontalPadding = (tablet ? 48.0 : (compact ? 36.0 : 48.0)) * scale;
+    CGFloat horizontalPadding = (tablet ? 48.0 : (compact ? 30.0 : 38.0)) * scale;
     CGFloat contentW = cardW - 2.0 * horizontalPadding;
     CGFloat fieldH = (tablet ? 80.0 : 54.0) * scale;
     UILabel *label = (UILabel *)[card viewWithTag:7006];
@@ -353,7 +362,7 @@
     UIView *leftLine = [self.view viewWithTag:7011];
     UIView *rightLine = [self.view viewWithTag:7012];
     UIButton *discord = (UIButton *)[self.view viewWithTag:7013];
-    CGFloat supportY = CGRectGetMaxY(card.frame) + (tablet ? 78.0 : (compact ? 28.0 : 48.0)) * scale;
+    CGFloat supportY = CGRectGetMaxY(card.frame) + (tablet ? 78.0 : (compact ? 30.0 : 42.0)) * scale;
     CGFloat lineGap = tablet ? 88.0 : 74.0;
     support.frame = CGRectMake((W - 120.0) / 2.0, supportY, 120.0, 24.0 * scale);
     leftLine.frame = CGRectMake(sideInset + 26.0, supportY + 11.0 * scale, MAX(0.0, W / 2.0 - lineGap), 1.0);

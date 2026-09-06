@@ -252,11 +252,12 @@
     discord.tag = 7013;
     discord.accessibilityLabel = @"Discord";
     discord.layer.cornerRadius = 26.0;
-    discord.layer.borderWidth = 1.0;
-    discord.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.75].CGColor;
-    discord.layer.shadowColor = self.chzRed.CGColor;
-    discord.layer.shadowOpacity = 0.30;
-    discord.layer.shadowRadius = 13.0;
+    discord.layer.borderWidth = 0.0;
+    discord.layer.borderColor = UIColor.clearColor.CGColor;
+    discord.backgroundColor = UIColor.clearColor;
+    discord.layer.shadowColor = UIColor.blackColor.CGColor;
+    discord.layer.shadowOpacity = 0.16;
+    discord.layer.shadowRadius = 10.0;
     discord.layer.shadowOffset = CGSizeZero;
     UIImage *discordImage = [self chzImageNamed:@"discord"];
     if (discordImage) {
@@ -283,6 +284,8 @@
     [button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
     button.titleLabel.font = [UIFont systemFontOfSize:(filled ? 21.0 : 19.0) weight:UIFontWeightBold];
     button.titleLabel.textAlignment = NSTextAlignmentCenter;
+    button.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
+    button.clipsToBounds = YES;
     if (filled) {
         button.layer.shadowColor = self.chzRed.CGColor;
         button.layer.shadowOpacity = 0.24;
@@ -378,13 +381,13 @@
 
     UIButton *did = (UIButton *)[card viewWithTag:7008];
     CGFloat didY = CGRectGetMaxY(field.frame) + controlGap;
-    did.frame = CGRectMake(horizontalPadding, didY, contentW, didH);
+    did.frame = CGRectMake(horizontalPadding + 2.0 * scale, didY, contentW - 4.0 * scale, didH);
     did.layer.cornerRadius = (tablet ? 22.0 : 18.0) * scale;
     did.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 24.0 : 19.0) * scale weight:UIFontWeightBold];
 
     UIButton *login = (UIButton *)[card viewWithTag:7009];
     CGFloat loginY = CGRectGetMaxY(did.frame) + controlGap;
-    login.frame = CGRectMake(horizontalPadding, loginY, contentW, loginH);
+    login.frame = CGRectMake(horizontalPadding + 2.0 * scale, loginY, contentW - 4.0 * scale, loginH);
     login.layer.cornerRadius = (tablet ? 22.0 : 18.0) * scale;
     login.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 26.0 : 21.0) * scale weight:UIFontWeightBold];
 

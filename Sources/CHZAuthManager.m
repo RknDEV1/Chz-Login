@@ -11,11 +11,25 @@
     // Nunca libera a tela somente porque o callback onSuccess foi disparado.
     // A key retornada pelo SDK precisa ser exatamente a key informada pelo usuário.
     NSString *serverKey = [client getKey];
-    if (![serverKey isKindOfClass:[NSString class]] ||
-        serverKey.length == 0 ||
-        ![serverKey isEqualToString:key]) {
-        return NO;
+    BOOL keyMatches = [serverKey isKindOfClass:[NSString class]] &&
+                      serverKey.length > 0 &&
+                      [serverKey isEqualToString:key];
+
+    // Algumas versões Lite Secure não preenchem getKey imediatamente, mas retornam a key
+    // confirmada no payload do callback. Use somente campos explícitos de key; nunca aceite
+    // o texto digitado como confirmação por conta própria.
+    if (!keyMatches && [payload isKindOfClass:[NSDictionary class]]) {
+        NSArray<NSString *> *keyFields = @[@"key", @"license", @"inputKey", @"accessKey"];
+        for (NSString *field in keyFields) {
+            id value = payload[field];
+            if ([value isKindOfClass:[NSString class]] && [value isEqualToString:key]) {
+                keyMatches = YES;
+                break;
+            }
+        }
     }
+
+    if (!keyMatches) return NO;
 
     // Se o payload trouxer um indicador explícito de falha, nunca aceite a key.
     if ([payload isKindOfClass:[NSDictionary class]]) {
@@ -34,11 +48,8 @@
     }
 
     NSString *packageName = [client getPackageName];
-    if (![packageName isKindOfClass:[NSString class]] || packageName.length == 0) {
-        return NO;
-    }
-
-    NSLog(@"[CHZLogin] resposta confirmou a key e o package");
+    NSLog(@"[CHZLogin] resposta confirmou a key; package recebido: %@",
+          ([packageName isKindOfClass:[NSString class]] && packageName.length > 0) ? @"SIM" : @"NAO");
     return YES;
 }
 

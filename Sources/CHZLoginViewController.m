@@ -430,10 +430,8 @@
 
 - (void)didTapped:(__unused UIButton *)sender {
     NSURL *url = [NSURL URLWithString:@"https://udid.baontq.xyz/udid.php?id=23741&openurl=(null)"];
-    if (!url) return;
-    UIApplication *application = UIApplication.sharedApplication;
-    if ([application canOpenURL:url]) {
-        [application openURL:url options:@{} completionHandler:nil];
+    if (url) {
+        [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
     }
 }
 

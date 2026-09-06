@@ -84,7 +84,7 @@
     return YES;
 }
 
-- (NSString *)chzSafeExpiryDateFromClient:(APIClient *)client {
+- (NSString *)chzSafeExpiryDateFromClient:(APIClient *)client payload:(NSDictionary *)payload {
     NSString *expiry = nil;
     @try {
         expiry = [client getExpiryDate];
@@ -94,6 +94,22 @@
     } @catch (NSException *exception) {
         NSLog(@"[CHZLogin] não foi possível ler a expiração: %@", exception.reason ?: @"sem motivo");
     }
+
+    if (![expiry isKindOfClass:[NSString class]] || expiry.length == 0) {
+        NSArray<NSString *> *fields = @[@"expiry", @"expiresAt", @"expiredAt", @"expiration", @"expiryDate"];
+        for (NSString *field in fields) {
+            id value = [payload isKindOfClass:[NSDictionary class]] ? [(NSDictionary *)payload objectForKey:field] : nil;
+            if ([value isKindOfClass:[NSString class]] && [value length] > 0) {
+                expiry = value;
+                break;
+            }
+            if ([value isKindOfClass:[NSNumber class]]) {
+                expiry = [(NSNumber *)value stringValue];
+                break;
+            }
+        }
+    }
+
     return [expiry isKindOfClass:[NSString class]] ? expiry : nil;
 }
 
@@ -213,7 +229,7 @@
         }
         dispatch_async(dispatch_get_main_queue(), ^{
             if (confirmed) {
-                NSString *expiry = [self chzSafeExpiryDateFromClient:client];
+                NSString *expiry = [self chzSafeExpiryDateFromClient:client payload:data];
                 NSError *saveError = nil;
                 if (expiry.length > 0) {
                     [CHZKeychain saveSessionForKey:trimmedKey expiry:expiry error:&saveError];

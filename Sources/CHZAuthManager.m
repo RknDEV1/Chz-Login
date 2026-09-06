@@ -38,12 +38,25 @@
     return YES;
 }
 
+- (NSString *)chzExpiryStringFromObject:(id)object {
+    if ([object isKindOfClass:[NSString class]]) return object;
+    if ([object isKindOfClass:[NSNumber class]]) return [(NSNumber *)object stringValue];
+    if ([object isKindOfClass:[NSDate class]]) {
+        NSISO8601DateFormatter *formatter = [[NSISO8601DateFormatter alloc] init];
+        formatter.formatOptions = NSISO8601DateFormatWithInternetDateTime | NSISO8601DateFormatWithFractionalSeconds;
+        return [formatter stringFromDate:(NSDate *)object];
+    }
+    return nil;
+}
+
 - (NSString *)chzSafeExpiryDateFromClient:(APIClient *)client key:(NSString *)key payload:(NSDictionary *)payload {
     NSString *expiry = nil;
     @try {
-        expiry = [client getExpiryDate];
-        if (![expiry isKindOfClass:[NSString class]] || expiry.length == 0) {
-            expiry = [client getExpiredAt];
+        id rawExpiry = [client getExpiryDate];
+        expiry = [self chzExpiryStringFromObject:rawExpiry];
+        if (expiry.length == 0) {
+            id rawExpiredAt = [client getExpiredAt];
+            expiry = [self chzExpiryStringFromObject:rawExpiredAt];
         }
     } @catch (NSException *exception) {
         NSLog(@"[CHZLogin] não foi possível ler a expiração: %@", exception.reason ?: @"sem motivo");
@@ -53,14 +66,8 @@
     if (![expiry isKindOfClass:[NSString class]] || expiry.length == 0) {
         for (NSString *field in fields) {
             id value = [payload isKindOfClass:[NSDictionary class]] ? [(NSDictionary *)payload objectForKey:field] : nil;
-            if ([value isKindOfClass:[NSString class]] && [value length] > 0) {
-                expiry = value;
-                break;
-            }
-            if ([value isKindOfClass:[NSNumber class]]) {
-                expiry = [(NSNumber *)value stringValue];
-                break;
-            }
+            expiry = [self chzExpiryStringFromObject:value];
+            if (expiry.length > 0) break;
         }
     }
 

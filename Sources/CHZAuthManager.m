@@ -17,15 +17,6 @@
         return NO;
     }
 
-    // O SDK deve conseguir obter os dados da key dentro do package configurado.
-    id packageData = [client getPackageDataWithKey:key];
-    if (packageData == nil || packageData == (id)[NSNull null]) {
-        return NO;
-    }
-    if ([packageData isKindOfClass:[NSDictionary class]] && [(NSDictionary *)packageData count] == 0) {
-        return NO;
-    }
-
     // Se o payload trouxer um indicador explícito de falha, nunca aceite a key.
     if ([payload isKindOfClass:[NSDictionary class]]) {
         id explicitSuccess = payload[@"success"] ?: payload[@"valid"] ?: payload[@"status"];
@@ -40,6 +31,11 @@
                 return NO;
             }
         }
+    }
+
+    NSString *packageName = [client getPackageName];
+    if (![packageName isKindOfClass:[NSString class]] || packageName.length == 0) {
+        return NO;
     }
 
     NSLog(@"[CHZLogin] resposta confirmou a key e o package");

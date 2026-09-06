@@ -2,6 +2,7 @@
 #import <UIKit/UIKit.h>
 #import "APIClient.h"
 #import "CHZSecrets.h"
+#import "CHZKeychain.h"
 
 @implementation CHZAuthManager
 
@@ -83,6 +84,61 @@
     return YES;
 }
 
+- (NSString *)chzSafeExpiryDateFromClient:(APIClient *)client {
+    NSString *expiry = nil;
+    @try {
+        expiry = [client getExpiryDate];
+        if (![expiry isKindOfClass:[NSString class]] || expiry.length == 0) {
+            expiry = [client getExpiredAt];
+        }
+    } @catch (NSException *exception) {
+        NSLog(@"[CHZLogin] não foi possível ler a expiração: %@", exception.reason ?: @"sem motivo");
+    }
+    return [expiry isKindOfClass:[NSString class]] ? expiry : nil;
+}
+
+- (NSDate *)chzDateFromExpiryString:(NSString *)value {
+    if (![value isKindOfClass:[NSString class]] || value.length == 0) return nil;
+
+    NSISO8601DateFormatter *iso = [[NSISO8601DateFormatter alloc] init];
+    iso.formatOptions = NSISO8601DateFormatWithInternetDateTime | NSISO8601DateFormatWithFractionalSeconds;
+    NSDate *date = [iso dateFromString:value];
+    if (!date) {
+        iso.formatOptions = NSISO8601DateFormatWithInternetDateTime;
+        date = [iso dateFromString:value];
+    }
+    if (!date) {
+        NSNumberFormatter *number = [[NSNumberFormatter alloc] init];
+        NSNumber *timestamp = [number numberFromString:value];
+        if (timestamp != nil) date = [NSDate dateWithTimeIntervalSince1970:timestamp.doubleValue];
+    }
+    if (!date) {
+        NSDateFormatter *fallback = [[NSDateFormatter alloc] init];
+        fallback.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+        fallback.timeZone = [NSTimeZone timeZoneForSecondsFromGMT:0];
+        fallback.dateFormat = @"yyyy-MM-dd HH:mm:ss";
+        date = [fallback dateFromString:value];
+    }
+    return date;
+}
+
+- (BOOL)hasValidSavedSession {
+    NSDictionary *session = [CHZKeychain loadSession:nil];
+    NSString *key = session[@"key"];
+    NSString *expiry = session[@"expiry"];
+    NSDate *expirationDate = [self chzDateFromExpiryString:expiry];
+
+    if (![key isKindOfClass:[NSString class]] || key.length == 0 || !expirationDate || [expirationDate timeIntervalSinceNow] <= 0.0) {
+        if (session) [CHZKeychain deleteKey:nil];
+        return NO;
+    }
+    return YES;
+}
+
+- (void)clearSavedSession {
+    [CHZKeychain deleteKey:nil];
+}
+
 + (instancetype)sharedManager {
     static CHZAuthManager *manager;
     static dispatch_once_t onceToken;
@@ -146,6 +202,12 @@
         }
         dispatch_async(dispatch_get_main_queue(), ^{
             if (confirmed) {
+                NSString *expiry = [self chzSafeExpiryDateFromClient:client];
+                NSError *saveError = nil;
+                if (expiry.length > 0) {
+                    [CHZKeychain saveSessionForKey:trimmedKey expiry:expiry error:&saveError];
+                }
+                NSLog(@"[CHZLogin] sessão salva; expiração=%@", expiry.length > 0 ? expiry : @"não disponível");
                 if (success) success();
             } else if (failure) {
                 failure(@"A key não pertence ao package autorizado ou foi recusada pela API.");

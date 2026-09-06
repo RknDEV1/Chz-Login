@@ -8,6 +8,8 @@ typedef void (^CHZAuthFailure)(NSString *message);
 @interface CHZAuthManager : NSObject
 
 + (instancetype)sharedManager;
+- (BOOL)hasValidSavedSession;
+- (void)clearSavedSession;
 - (void)loginWithKey:(NSString *)key success:(CHZAuthSuccess)success failure:(CHZAuthFailure)failure;
 
 @end

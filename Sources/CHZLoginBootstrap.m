@@ -2,6 +2,7 @@
 #import <dispatch/dispatch.h>
 
 #import "CHZLoginViewController.h"
+#import "CHZAuthManager.h"
 
 static BOOL CHZLoginWasPresented = NO;
 static BOOL CHZPresentationInFlight = NO;
@@ -87,6 +88,12 @@ static void CHZTryPresentLogin(void) {
     UIViewController *root = window.rootViewController;
     if (!root || !root.viewIfLoaded.window) {
         CHZScheduleAnotherPresentationAttempt();
+        return;
+    }
+
+    if ([[CHZAuthManager sharedManager] hasValidSavedSession]) {
+        CHZLoginWasPresented = YES;
+        NSLog(@"[CHZLogin] sessão local válida; tela de login não será apresentada");
         return;
     }
 

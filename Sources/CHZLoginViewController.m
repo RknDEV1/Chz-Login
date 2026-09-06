@@ -57,7 +57,8 @@
     // A autenticação só começa após o usuário tocar em ENTRAR;
     // isso evita que uma key antiga no Keychain feche o modal antes da interação.
     self.keyField.text = @"";
-    self.statusLabel.text = @"Digite sua key para continuar.";
+    self.statusLabel.text = @"";
+    self.statusLabel.hidden = YES;
     self.statusLabel.textColor = self.chzMutedWhite;
 }
 
@@ -128,11 +129,11 @@
     priv.textAlignment = NSTextAlignmentLeft;
     [self.view addSubview:priv];
 
-    self.logoView = [[UIImageView alloc] initWithImage:[self chzImageNamed:@"CHZPrivLogo"]];
+    // O wordmark textual reproduz a referência CHZ PRIV sem o quadrado branco do asset antigo.
+    self.logoView = [[UIImageView alloc] initWithFrame:CGRectZero];
     self.logoView.tag = 7016;
-    self.logoView.contentMode = UIViewContentModeScaleAspectFit;
+    self.logoView.hidden = YES;
     self.logoView.accessibilityLabel = @"CHZ PRIV";
-    self.logoView.hidden = (self.logoView.image == nil);
     [self.view addSubview:self.logoView];
 
     UILabel *subtitle = [[UILabel alloc] initWithFrame:CGRectZero];
@@ -178,7 +179,7 @@
 
     self.didButton = [self makeButton:@"OBTER DID" filled:NO action:@selector(didTapped:)];
     self.didButton.tag = 7008;
-    UIImage *didIcon = [UIImage systemImageNamed:@"person.crop.rectangle"];
+    UIImage *didIcon = [UIImage systemImageNamed:@"doc.on.clipboard"];
     if (didIcon) {
         [self.didButton setImage:[didIcon imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
         self.didButton.tintColor = [UIColor colorWithWhite:0.82 alpha:1.0];
@@ -280,13 +281,15 @@
     BOOL compact = availableHeight < 650.0;
     BOOL tablet = MIN(W, H) >= 600.0;
 
-    self.topGradient.frame = CGRectMake(MAX(0.0, W * 0.12), safeTop + 125.0 * scale, W * 0.76, 3.0);
+    self.topGradient.frame = CGRectMake(MAX(0.0, W * 0.20), safeTop + 122.0 * scale, W * 0.60, 2.0);
     self.bottomGradient.frame = CGRectMake(MAX(0.0, W * 0.16), H - safeBottom - 250.0 * scale, W * 0.68, 3.0);
 
-    CGFloat glowDiameter = MIN(W * 0.66, tablet ? 420.0 : 340.0);
+    CGFloat glowDiameter = MIN(W * 0.54, tablet ? 360.0 : 285.0);
     UIView *glow = [self.view viewWithTag:7001];
-    glow.frame = CGRectMake((W - glowDiameter) / 2.0, safeTop + 22.0 * scale, glowDiameter, glowDiameter * 0.42);
+    glow.frame = CGRectMake((W - glowDiameter) / 2.0, safeTop + 22.0 * scale, glowDiameter, glowDiameter * 0.28);
     glow.layer.cornerRadius = glow.frame.size.height / 2.0;
+    glow.layer.borderWidth = 0.0;
+    glow.layer.shadowOpacity = 0.0;
 
     CGFloat logoY = safeTop + (tablet ? 54.0 : 42.0) * scale;
     CGFloat logoW = MIN(W * (tablet ? 0.70 : 0.70), tablet ? 560.0 : 350.0);
@@ -296,23 +299,19 @@
     CGFloat wordSize = (tablet ? 76.0 : 52.0) * scale;
     chz.font = [UIFont italicSystemFontOfSize:wordSize];
     priv.font = [UIFont italicSystemFontOfSize:wordSize];
-    chz.frame = CGRectMake((W - logoW) / 2.0, logoY, logoW * 0.49, wordH);
-    priv.frame = CGRectMake(CGRectGetMidX(chz.frame) - 3.0 * scale, logoY, logoW * 0.53, wordH);
+    CGFloat wordX = (W - logoW) / 2.0;
+    chz.frame = CGRectMake(wordX, logoY, logoW * 0.43, wordH);
+    priv.frame = CGRectMake(wordX + logoW * 0.39, logoY, logoW * 0.61, wordH);
     UIImageView *logoView = (UIImageView *)[self.view viewWithTag:7016];
-    if (logoView.image != nil) {
-        chz.hidden = YES;
-        priv.hidden = YES;
-        logoView.hidden = NO;
-        logoView.frame = CGRectMake((W - logoW) / 2.0, logoY - 10.0 * scale, logoW, (tablet ? 116.0 : 84.0) * scale);
-    } else {
-        chz.hidden = NO;
-        priv.hidden = NO;
-        logoView.hidden = YES;
-    }
+    // Mantém o nome CHZ PRIV visível em todos os aparelhos, sem depender do asset quadrado.
+    chz.hidden = NO;
+    priv.hidden = NO;
+    logoView.hidden = YES;
+    logoView.frame = CGRectZero;
 
     UILabel *subtitle = (UILabel *)[self.view viewWithTag:7004];
     subtitle.font = [UIFont systemFontOfSize:17.0 * scale weight:UIFontWeightMedium];
-    CGFloat logoBottom = logoView.image != nil ? CGRectGetMaxY(logoView.frame) : CGRectGetMaxY(chz.frame);
+    CGFloat logoBottom = CGRectGetMaxY(chz.frame);
     subtitle.frame = CGRectMake(20.0, logoBottom + 13.0 * scale, W - 40.0, 25.0 * scale);
 
     CGFloat maxCardWidth = tablet ? 726.0 : 680.0;
@@ -348,7 +347,7 @@
     indicator.center = CGPointMake(CGRectGetMidX(login.frame), CGRectGetMidY(login.frame));
 
     UILabel *status = (UILabel *)[card viewWithTag:7015];
-    status.frame = CGRectMake(horizontalPadding, CGRectGetMaxY(login.frame) + (tablet ? 14.0 : 8.0) * scale, contentW, (tablet ? 36.0 : 30.0) * scale);
+    status.frame = CGRectMake(horizontalPadding, CGRectGetMaxY(login.frame) + (tablet ? 12.0 : 7.0) * scale, contentW, (tablet ? 32.0 : 26.0) * scale);
 
     UILabel *support = (UILabel *)[self.view viewWithTag:7010];
     UIView *leftLine = [self.view viewWithTag:7011];
@@ -395,6 +394,7 @@
 - (void)loginTapped:(UIButton *)sender {
     NSString *key = [self.keyField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if (key.length == 0 || self.activityIndicator.isAnimating) {
+        self.statusLabel.hidden = NO;
         self.statusLabel.text = @"Digite sua key para continuar.";
         self.statusLabel.textColor = [self.chzRed colorWithAlphaComponent:0.95];
         return;
@@ -403,6 +403,7 @@
     sender.enabled = NO;
     self.keyField.enabled = NO;
     self.didButton.enabled = NO;
+    self.statusLabel.hidden = NO;
     self.statusLabel.text = @"Validando sua key…";
     self.statusLabel.textColor = self.chzMutedWhite;
     [self.activityIndicator startAnimating];

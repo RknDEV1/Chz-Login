@@ -40,23 +40,6 @@
     return self;
 }
 
-- (void)validateSavedKeyWithSuccess:(CHZAuthSuccess)success
-                            failure:(CHZAuthFailure)failure {
-    NSError *loadError = nil;
-    NSString *savedKey = [CHZKeychain loadKey:&loadError];
-
-    if (savedKey.length == 0) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if (failure) {
-                failure(loadError.localizedDescription ?: @"Nenhuma key salva.");
-            }
-        });
-        return;
-    }
-
-    [self loginWithKey:savedKey success:success failure:failure];
-}
-
 - (void)loginWithKey:(NSString *)key
              success:(CHZAuthSuccess)success
              failure:(CHZAuthFailure)failure {
@@ -95,10 +78,6 @@
             if (failure) failure(message);
         });
     }];
-}
-
-- (void)clearSavedKey {
-    [CHZKeychain deleteKey:nil];
 }
 
 @end

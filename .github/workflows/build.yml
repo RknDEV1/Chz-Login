@@ -71,7 +71,6 @@ jobs:
           mkdir -p build/obj
           for source in \
             Sources/CHZAuthManager.m \
-            Sources/CHZKeychain.m \
             Sources/CHZLoginViewController.m \
             Sources/CHZLoginBootstrap.m; do
             object="build/obj/$(basename "${source%.m}").o"

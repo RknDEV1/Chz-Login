@@ -8,6 +8,8 @@ Config/CHZSecrets.h
 # Artefatos de build
 build/
 DerivedData/
+ChzAuth/BuildGenerated/
+ChzAuth/build/
 *.o
 *.dylib
 *.ipa

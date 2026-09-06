@@ -1,0 +1,83 @@
+name: Build ChzAuth app
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    env:
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate project structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f ChzAuth.xcodeproj/project.pbxproj
+          test -f ChzAuth/Info.plist
+          test -f ChzAuth/Sources/CHZLoginViewController.m
+          test -f ChzAuth/Sources/CHZAuthManager.m
+          test -f ChzAuth/Vendor/API/libAPIClient.a
+          test -f ChzAuth/Resources/CHZPrivLogo.png
+          test -f ChzAuth/Resources/discord.png
+          test ! -f ChzAuth/BuildGenerated/CHZSecrets.h
+
+      - name: Prepare private configuration
+        env:
+          CHZ_API_TOKEN: ${{ secrets.CHZ_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CHZ_API_TOKEN"
+          mkdir -p ChzAuth/BuildGenerated
+          TOKEN="$CHZ_API_TOKEN" python3 - <<'PY'
+          import os
+          from pathlib import Path
+          token = ''.join(os.environ['TOKEN'].split())
+          if not token:
+              raise SystemExit('CHZ_API_TOKEN vazio')
+          escaped = token.replace('\\', '\\\\').replace('"', '\\"')
+          Path('ChzAuth/BuildGenerated/CHZSecrets.h').write_text(
+              '#import <Foundation/Foundation.h>\n#define CHZ_API_TOKEN @"' + escaped + '"\n',
+              encoding='utf-8'
+          )
+          PY
+
+      - name: Build unsigned iOS app
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project ChzAuth.xcodeproj \
+            -target ChzAuth \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build | tee build/xcodebuild.log
+
+      - name: Verify resources in app bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP=$(find build/DerivedData/Build/Products/Release-iphoneos -maxdepth 1 -name 'ChzAuth.app' -print -quit)
+          test -n "$APP"
+          test -f "$APP/CHZPrivLogo.png"
+          test -f "$APP/discord.png"
+          test -f "$APP/fortnite.otf"
+          test -f "$APP/Info.plist"
+
+      - name: Upload unsigned app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChzAuth-unsigned-ios
+          path: |
+            build/DerivedData/Build/Products/Release-iphoneos/ChzAuth.app
+            build/xcodebuild.log

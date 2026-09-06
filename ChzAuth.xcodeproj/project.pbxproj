@@ -1,0 +1,113 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1000001 /* ChzAuthAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = A2000001; };
+		A1000002 /* ChzAuthSceneDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = A2000002; };
+		A1000003 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = A2000003; };
+		A1000004 /* CHZLoginViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = A2000004; };
+		A1000005 /* CHZAuthManager.m in Sources */ = {isa = PBXBuildFile; fileRef = A2000005; };
+		A1000006 /* CHZKeychain.m in Sources */ = {isa = PBXBuildFile; fileRef = A2000006; };
+		A1000007 /* CHZPrivLogo.png in Resources */ = {isa = PBXBuildFile; fileRef = A2000007; };
+		A1000008 /* discord.png in Resources */ = {isa = PBXBuildFile; fileRef = A2000008; };
+		A1000009 /* fortnite.otf in Resources */ = {isa = PBXBuildFile; fileRef = A2000009; };
+		A1000010 /* libAPIClient.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A2000010; };
+		A1000011 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2000011; };
+		A1000012 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2000012; };
+		A1000013 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2000013; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A2000001 /* ChzAuthAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ChzAuthAppDelegate.m; sourceTree = "<group>"; };
+		A2000002 /* ChzAuthSceneDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ChzAuthSceneDelegate.m; sourceTree = "<group>"; };
+		A2000003 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		A2000004 /* CHZLoginViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CHZLoginViewController.m; sourceTree = "<group>"; };
+		A2000005 /* CHZAuthManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CHZAuthManager.m; sourceTree = "<group>"; };
+		A2000006 /* CHZKeychain.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CHZKeychain.m; sourceTree = "<group>"; };
+		A2000007 /* CHZPrivLogo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = CHZPrivLogo.png; sourceTree = "<group>"; };
+		A2000008 /* discord.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = discord.png; sourceTree = "<group>"; };
+		A2000009 /* fortnite.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = fortnite.otf; sourceTree = "<group>"; };
+		A2000010 /* libAPIClient.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libAPIClient.a; sourceTree = "<group>"; };
+		A2000011 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		A2000012 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		A2000013 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		A2000014 /* ChzAuth.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChzAuth.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2000015 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A2000016 /* APIClient.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = APIClient.h; sourceTree = "<group>"; };
+		A2000017 /* CHZSecrets.example.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CHZSecrets.example.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A3000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (A1000010, A1000011, A1000012, A1000013, );
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A4000001 = {isa = PBXGroup; children = (A4000002, A4000003, A4000004, A2000015, ); path = ChzAuth; sourceTree = "<group>"; };
+		A4000002 /* Sources */ = {isa = PBXGroup; children = (A2000001, A2000002, A2000003, A2000004, A2000005, A2000006, A2000017, ); path = Sources; sourceTree = "<group>"; };
+		A4000003 /* Resources */ = {isa = PBXGroup; children = (A2000007, A2000008, A2000009, ); path = Resources; sourceTree = "<group>"; };
+		A4000004 /* Vendor */ = {isa = PBXGroup; children = (A4000005, ); path = Vendor; sourceTree = "<group>"; };
+		A4000005 /* API */ = {isa = PBXGroup; children = (A2000010, A2000016, ); path = API; sourceTree = "<group>"; };
+		A4000006 /* Products */ = {isa = PBXGroup; children = (A2000014, ); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A5000001 /* ChzAuth */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A6000002;
+			buildPhases = (A3000001, A3000002, A3000003, );
+			buildRules = ();
+			dependencies = ();
+			name = ChzAuth;
+			productName = ChzAuth;
+			productReference = A2000014;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A5000002 /* Project object */ = {
+			isa = PBXProject;
+			attributes = { LastUpgradeCheck = 1600; ORGANIZATIONNAME = ChzAuth; TargetAttributes = { A5000001 = { CreatedOnToolsVersion = 16.0; }; }; };
+			buildConfigurationList = A6000001;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			knownRegions = (en, Base, );
+			mainGroup = A4000001;
+			productRefGroup = A4000006;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (A5000001, );
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A3000002 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A1000007, A1000008, A1000009, ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A3000003 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1000001, A1000002, A1000003, A1000004, A1000005, A1000006, ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A7000001 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; HEADER_SEARCH_PATHS = ("$(PROJECT_DIR)/ChzAuth/BuildGenerated", "$(PROJECT_DIR)/ChzAuth/Vendor/API"); INFOPLIST_FILE = ChzAuth/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 16.0; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks"); OTHER_LDFLAGS = ("-ObjC",); PRODUCT_BUNDLE_IDENTIFIER = "com.auth.chzlogin"; PRODUCT_NAME = "ChzAuth"; SDKROOT = iphoneos; TARGETED_DEVICE_FAMILY = "1"; }; name = Debug; };
+		A7000002 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; HEADER_SEARCH_PATHS = ("$(PROJECT_DIR)/ChzAuth/BuildGenerated", "$(PROJECT_DIR)/ChzAuth/Vendor/API"); INFOPLIST_FILE = ChzAuth/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 16.0; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks"); OTHER_LDFLAGS = ("-ObjC",); PRODUCT_BUNDLE_IDENTIFIER = "com.auth.chzlogin"; PRODUCT_NAME = "ChzAuth"; SDKROOT = iphoneos; TARGETED_DEVICE_FAMILY = "1"; }; name = Release; };
+		A7000003 /* Project Debug */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; IPHONEOS_DEPLOYMENT_TARGET = 16.0; }; name = Debug; };
+		A7000004 /* Project Release */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; IPHONEOS_DEPLOYMENT_TARGET = 16.0; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A6000001 /* Project configuration list */ = {isa = XCConfigurationList; buildConfigurations = (A7000003, A7000004, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A6000002 /* Target configuration list */ = {isa = XCConfigurationList; buildConfigurations = (A7000001, A7000002, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+	};
+	rootObject = A5000002;
+}

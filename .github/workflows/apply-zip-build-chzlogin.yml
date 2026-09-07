@@ -40,11 +40,12 @@ jobs:
       - name: Extract package safely
         run: |
           set -euo pipefail
-          if unzip -Z1 "$ZIP_PATH" | grep -Eq '(^/|(^|/)\.\.(\/|$)|(^|/)\.github(\/|$)|(^|/)CHZSecrets\.h$|(^|/)\.env$)'; then
+          if unzip -Z1 "$ZIP_PATH" | grep -Eq '(^/|(^|/)\.\.(\/|$)|(^|/)CHZSecrets\.h$|(^|/)\.env$)'; then
             echo "ZIP contains a prohibited or unsafe path." >&2
             exit 3
           fi
-          unzip -q "$ZIP_PATH" -d "$GITHUB_WORKSPACE"
+          # Preserve the workflow already installed in the repository.
+          unzip -q "$ZIP_PATH" -x '.github/*' '*/.github/*' -d "$GITHUB_WORKSPACE"
           rm -rf incoming-package
           find . -name 'CHZSecrets.h' -not -path './ChzAuth/Sources/CHZSecrets.h' -delete
           test -f Scripts/build_chzlogin_xcframework.sh

@@ -1,0 +1,121 @@
+name: Apply ZIP and Build ChzLogin XCFramework
+
+on:
+  workflow_dispatch:
+    inputs:
+      zip_url:
+        description: "URL direta para download do ZIP (Dropbox deve usar dl=1)"
+        required: true
+        type: string
+      commit_changes:
+        description: "Salvar as alterações extraídas no branch principal"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+env:
+  ZIP_PATH: ${{ github.workspace }}/incoming-package.zip
+
+jobs:
+  apply-and-build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download ZIP package
+        env:
+          ZIP_URL: ${{ inputs.zip_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p incoming-package
+          curl --fail --location --retry 3 --retry-delay 2 --output "$ZIP_PATH" "$ZIP_URL"
+          unzip -t "$ZIP_PATH"
+
+      - name: Extract package safely
+        run: |
+          set -euo pipefail
+          python3 Scripts/safe_extract_zip.py "$ZIP_PATH" "$GITHUB_WORKSPACE"
+          rm -rf incoming-package
+          find . -name 'CHZSecrets.h' -not -path './ChzAuth/Sources/CHZSecrets.h' -delete
+          test -f Scripts/build_chzlogin_xcframework.sh
+          test -f ChzAuth.xcodeproj/project.pbxproj
+
+      - name: Prepare private secrets header
+        env:
+          CHZ_SECRETS_HEADER: ${{ secrets.CHZ_SECRETS_HEADER }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CHZ_SECRETS_HEADER:-}" ]; then
+            echo "Missing repository secret CHZ_SECRETS_HEADER." >&2
+            exit 2
+          fi
+          printf '%s\n' "$CHZ_SECRETS_HEADER" > ChzAuth/Sources/CHZSecrets.h
+
+      - name: Select Xcode and show SDK
+        env:
+          XCODE_PATH: ${{ vars.XCODE_PATH }}
+        run: |
+          set -euo pipefail
+          if [ -n "${XCODE_PATH:-}" ]; then
+            sudo xcode-select -s "$XCODE_PATH"
+          fi
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Build iOS 16 to iOS 27 beta compatible framework
+        env:
+          IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+          SDK_NAME: iphoneos
+        run: |
+          set -euo pipefail
+          chmod +x Scripts/build_chzlogin_xcframework.sh
+          Scripts/build_chzlogin_xcframework.sh
+
+      - name: Verify binary compatibility
+        run: |
+          set -euo pipefail
+          FRAMEWORK=build/ChzLogin.xcframework/ios-arm64/ChzLogin.framework/ChzLogin
+          test -f "$FRAMEWORK"
+          file "$FRAMEWORK"
+          otool -l "$FRAMEWORK" | grep -A4 LC_BUILD_VERSION
+          otool -L "$FRAMEWORK"
+          grep -F 'IPHONEOS_DEPLOYMENT_TARGET=16.0' build/ChzLogin.xcframework/BuildInfo.txt
+
+      - name: Remove secrets before commit
+        run: |
+          set -euo pipefail
+          rm -f ChzAuth/Sources/CHZSecrets.h
+
+      - name: Commit extracted source changes
+        if: ${{ inputs.commit_changes }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git reset -- .github/workflows/*.yml
+          git reset -- ChzAuth/Sources/CHZSecrets.h
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+          else
+            git commit -m "Apply Chz-Login ZIP package"
+            git push
+          fi
+
+      - name: Archive XCFramework
+        run: |
+          set -euo pipefail
+          ditto -c -k --sequesterRsrc --keepParent build/ChzLogin.xcframework ChzLogin.xcframework.zip
+
+      - name: Upload XCFramework artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChzLogin-xcframework-ios16-ios27beta
+          path: ChzLogin.xcframework.zip
+          if-no-files-found: error

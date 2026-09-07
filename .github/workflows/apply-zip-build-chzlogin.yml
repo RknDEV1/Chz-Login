@@ -40,7 +40,11 @@ jobs:
       - name: Extract package safely
         run: |
           set -euo pipefail
-          python3 Scripts/safe_extract_zip.py "$ZIP_PATH" "$GITHUB_WORKSPACE"
+          if unzip -Z1 "$ZIP_PATH" | grep -Eq '(^/|(^|/)\.\.(\/|$)|(^|/)\.github(\/|$)|(^|/)CHZSecrets\.h$|(^|/)\.env$)'; then
+            echo "ZIP contains a prohibited or unsafe path." >&2
+            exit 3
+          fi
+          unzip -q "$ZIP_PATH" -d "$GITHUB_WORKSPACE"
           rm -rf incoming-package
           find . -name 'CHZSecrets.h' -not -path './ChzAuth/Sources/CHZSecrets.h' -delete
           test -f Scripts/build_chzlogin_xcframework.sh
@@ -48,14 +52,20 @@ jobs:
 
       - name: Prepare private secrets header
         env:
-          CHZ_SECRETS_HEADER: ${{ secrets.CHZ_SECRETS_HEADER }}
+          CHZ_API_TOKEN: ${{ secrets.CHZ_API_TOKEN }}
+          CHZ_STORE_URL: ${{ vars.CHZ_STORE_URL }}
         run: |
           set -euo pipefail
-          if [ -z "${CHZ_SECRETS_HEADER:-}" ]; then
-            echo "Missing repository secret CHZ_SECRETS_HEADER." >&2
+          if [ -z "${CHZ_API_TOKEN:-}" ]; then
+            echo "Missing repository secret CHZ_API_TOKEN." >&2
             exit 2
           fi
-          printf '%s\n' "$CHZ_SECRETS_HEADER" > ChzAuth/Sources/CHZSecrets.h
+          CHZ_STORE_URL="${CHZ_STORE_URL:-https://discord.gg/chzpriv}"
+          cat > ChzAuth/Sources/CHZSecrets.h <<EOF
+          #import <Foundation/Foundation.h>
+          #define CHZ_API_TOKEN @"$CHZ_API_TOKEN"
+          #define CHZ_STORE_URL @"$CHZ_STORE_URL"
+          EOF
 
       - name: Select Xcode and show SDK
         env:
@@ -91,6 +101,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -f ChzAuth/Sources/CHZSecrets.h
+          unset CHZ_API_TOKEN CHZ_STORE_URL
 
       - name: Commit extracted source changes
         if: ${{ inputs.commit_changes }}

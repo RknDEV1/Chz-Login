@@ -152,8 +152,6 @@ static void CHZStartLoginPresentation(void) {
     });
 }
 
-__attribute__((constructor))
-static void CHZLoginBootstrapConstructor(void) {
-    NSLog(@"[CHZLogin] bootstrap carregado; aguardando a janela do app");
-    CHZStartLoginPresentation();
-}
+// A apresentação é controlada pelo CHZ PRIV via CHZLoginViewControllerRepresentable.
+// Não usar constructor para apresentar UIKit automaticamente: isso concorria com
+// o fullScreenCover do SwiftUI e fazia a tela aparecer e desaparecer prematuramente.

@@ -29,28 +29,14 @@
 }
 
 - (UIImage *)chzImageNamed:(NSString *)name {
-    UIImage *image = [UIImage imageNamed:name];
+    NSBundle *frameworkBundle = [NSBundle bundleForClass:[self class]];
+    NSString *resourcePath = [frameworkBundle pathForResource:@"CHZLoginResources" ofType:@"bundle"];
+    NSBundle *resourceBundle = resourcePath ? [NSBundle bundleWithPath:resourcePath] : nil;
+    UIImage *image = resourceBundle ? [UIImage imageNamed:name inBundle:resourceBundle compatibleWithTraitCollection:nil] : nil;
     if (image != nil) return image;
-
-    // O ESign pode renomear o bundle para CHZLoginResources 2.bundle.
-    // Procura todos os bundles CHZ e prefere a logo horizontal da referência.
-    NSArray<NSString *> *bundlePaths = [[NSBundle mainBundle] pathsForResourcesOfType:@"bundle" inDirectory:nil];
-    UIImage *bestImage = nil;
-    CGFloat bestScore = -1.0;
-    for (NSString *path in bundlePaths) {
-        NSString *filename = [[path lastPathComponent] stringByDeletingPathExtension];
-        if (![filename hasPrefix:@"CHZLoginResources"]) continue;
-        NSBundle *bundle = [NSBundle bundleWithPath:path];
-        UIImage *candidate = [UIImage imageNamed:name inBundle:bundle compatibleWithTraitCollection:nil];
-        if (candidate == nil) continue;
-        CGFloat aspect = candidate.size.height > 0.0 ? candidate.size.width / candidate.size.height : 0.0;
-        CGFloat score = (aspect > 1.15 ? 1000.0 : 0.0) + aspect;
-        if (score > bestScore) {
-            bestScore = score;
-            bestImage = candidate;
-        }
-    }
-    return bestImage;
+    image = [UIImage imageNamed:name inBundle:frameworkBundle compatibleWithTraitCollection:nil];
+    if (image != nil) return image;
+    return [UIImage imageNamed:name];
 }
 
 - (void)viewDidLoad {
@@ -137,22 +123,7 @@
     glass.alpha = 0.82;
     [card addSubview:glass];
 
-    UILabel *chz = [[UILabel alloc] initWithFrame:CGRectZero];
-    chz.tag = 7002;
-    chz.text = @"CHZ";
-    chz.textColor = self.chzRed;
-    chz.font = [UIFont fontWithName:@"HelveticaNeue-BoldItalic" size:52.0] ?: [UIFont italicSystemFontOfSize:52.0];
-    chz.textAlignment = NSTextAlignmentRight;
-    [self.view addSubview:chz];
-
-    UILabel *priv = [[UILabel alloc] initWithFrame:CGRectZero];
-    priv.tag = 7003;
-    priv.text = @"PRIV";
-    priv.textColor = self.chzWhite;
-    priv.font = [UIFont fontWithName:@"HelveticaNeue-BoldItalic" size:52.0] ?: [UIFont italicSystemFontOfSize:52.0];
-    priv.textAlignment = NSTextAlignmentLeft;
-    [self.view addSubview:priv];
-
+    // A referência usa a logo brush como marca única; não duplicar com labels.
     // Usa a logo brush/grafite transparente enviada pelo usuário como referência final.
     self.logoView = [[UIImageView alloc] initWithImage:[self chzImageNamed:@"CHZPrivLogoFinal"]];
     self.logoView.tag = 7016;
@@ -202,7 +173,7 @@
     self.keyField.leftViewMode = UITextFieldViewModeAlways;
     [card addSubview:self.keyField];
 
-    self.didButton = [self makeButton:@"OBTER UDID" filled:NO action:@selector(didTapped:)];
+    self.didButton = [self makeButton:@"OBTER DID" filled:NO action:@selector(didTapped:)];
     self.didButton.tag = 7008;
     UIImage *didIcon = [UIImage systemImageNamed:@"doc.on.clipboard"];
     if (didIcon) {
@@ -321,33 +292,19 @@
 
     CGFloat logoY = safeTop + (tablet ? 72.0 : 86.0) * scale;
     CGFloat logoW = MIN(W * (tablet ? 0.70 : 0.70), tablet ? 560.0 : 350.0);
-    CGFloat wordH = (tablet ? 86.0 : 58.0) * scale;
-    UILabel *chz = (UILabel *)[self.view viewWithTag:7002];
-    UILabel *priv = (UILabel *)[self.view viewWithTag:7003];
-    CGFloat wordSize = (tablet ? 76.0 : 52.0) * scale;
-    chz.font = [UIFont fontWithName:@"HelveticaNeue-BoldItalic" size:wordSize] ?: [UIFont italicSystemFontOfSize:wordSize];
-    priv.font = [UIFont fontWithName:@"HelveticaNeue-BoldItalic" size:wordSize] ?: [UIFont italicSystemFontOfSize:wordSize];
-    CGFloat wordX = (W - logoW) / 2.0;
-    chz.frame = CGRectMake(wordX, logoY, logoW * 0.43, wordH);
-    priv.frame = CGRectMake(wordX + logoW * 0.39, logoY, logoW * 0.61, wordH);
     UIImageView *logoView = (UIImageView *)[self.view viewWithTag:7016];
-    // A logo enviada é o wordmark final; os labels ficam como fallback somente se o asset não carregar.
     if (logoView.image != nil) {
-        chz.hidden = YES;
-        priv.hidden = YES;
         logoView.hidden = NO;
         CGFloat logoH = logoW * (857.0 / 1181.0);
         logoView.frame = CGRectMake((W - logoW) / 2.0, logoY, logoW, logoH);
     } else {
-        chz.hidden = NO;
-        priv.hidden = NO;
         logoView.hidden = YES;
         logoView.frame = CGRectZero;
     }
 
     UILabel *subtitle = (UILabel *)[self.view viewWithTag:7004];
     subtitle.font = [UIFont systemFontOfSize:18.0 * scale weight:UIFontWeightMedium];
-    CGFloat logoBottom = logoView.image != nil ? CGRectGetMaxY(logoView.frame) : CGRectGetMaxY(chz.frame);
+    CGFloat logoBottom = logoView.image != nil ? CGRectGetMaxY(logoView.frame) : logoY;
     subtitle.frame = CGRectMake(20.0, logoBottom + 13.0 * scale, W - 40.0, 25.0 * scale);
 
     CGFloat maxCardWidth = tablet ? 726.0 : 680.0;

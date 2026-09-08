@@ -320,8 +320,10 @@
     CGFloat controlGap = (tablet ? 24.0 : 16.0) * scale;
     CGFloat didH = (tablet ? 76.0 : 56.0) * scale;
     CGFloat loginH = (tablet ? 84.0 : 58.0) * scale;
-    CGFloat cardH = cardTop + labelH + gapAfterLabel + fieldH + controlGap + didH + controlGap + loginH + (tablet ? 42.0 : 32.0) * scale;
-    if (compact && !tablet) cardH = MIN(cardH, 326.0 * scale);
+    CGFloat statusGap = (tablet ? 12.0 : 8.0) * scale;
+    CGFloat statusH = (tablet ? 34.0 : 28.0) * scale;
+    CGFloat cardH = cardTop + labelH + gapAfterLabel + fieldH + controlGap + didH + controlGap + loginH + statusGap + statusH + (tablet ? 18.0 : 12.0) * scale;
+    if (compact && !tablet) cardH = MIN(cardH, 382.0 * scale);
     UIView *card = [self.view viewWithTag:7005];
     card.frame = CGRectMake((W - cardW) / 2.0, cardY, cardW, cardH);
     UIVisualEffectView *glass = (UIVisualEffectView *)[card viewWithTag:7020];
@@ -353,7 +355,7 @@
     indicator.center = CGPointMake(CGRectGetMidX(login.frame), CGRectGetMidY(login.frame));
 
     UILabel *status = (UILabel *)[card viewWithTag:7015];
-    status.frame = CGRectMake(horizontalPadding, CGRectGetMaxY(login.frame) + (tablet ? 12.0 : 8.0) * scale, contentW, (tablet ? 34.0 : 28.0) * scale);
+    status.frame = CGRectMake(horizontalPadding, CGRectGetMaxY(login.frame) + statusGap, contentW, statusH);
 
     UILabel *support = (UILabel *)[self.view viewWithTag:7010];
     UIView *leftLine = [self.view viewWithTag:7011];

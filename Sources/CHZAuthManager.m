@@ -223,6 +223,9 @@
                       saved ? @"SIM" : @"NAO",
                       expiry.length > 0 ? expiry : @"não disponível",
                       saveError.localizedDescription ?: @"nenhum");
+                // A API confirmou a key; o estado da sessão atual pode ser atualizado
+                // mesmo se o SDK não expuser uma expiração persistível nesta resposta.
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"CHZLoginDidAuthenticateNotification" object:nil];
                 if (success) success();
             } else if (failure) {
                 failure(@"A key não pertence ao package autorizado ou foi recusada pela API.");

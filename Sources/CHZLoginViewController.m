@@ -5,8 +5,7 @@
 @interface CHZLoginViewController () <UITextFieldDelegate>
 @property (nonatomic, strong) UITextField *keyField;
 @property (nonatomic, strong) UIButton *loginButton;
-@property (nonatomic, strong) UIButton *didButton;
-@property (nonatomic, strong) UIImageView *logoView;
+@property (nonatomic, strong) UIImageView *lockView;
 @property (nonatomic, strong) UIActivityIndicatorView *activityIndicator;
 @property (nonatomic, strong) UILabel *statusLabel;
 @property (nonatomic, strong) CAGradientLayer *topGradient;
@@ -45,7 +44,7 @@
     // A referência é uma composição escura; mantém o mesmo resultado no modo claro e escuro do sistema.
     self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
     self.modalPresentationCapturesStatusBarAppearance = YES;
-    self.view.backgroundColor = [UIColor colorWithRed:0.018 green:0.018 blue:0.024 alpha:1.0];
+    self.view.backgroundColor = [UIColor colorWithRed:0.018 green:0.004 blue:0.008 alpha:1.0];
     self.view.clipsToBounds = YES;
     [self buildInterface];
 
@@ -68,127 +67,77 @@
 }
 
 - (void)buildInterface {
-    self.topGradient = [CAGradientLayer layer];
-    self.topGradient.colors = @[
-        (id)[UIColor clearColor].CGColor,
-        (id)[self.chzRed colorWithAlphaComponent:0.22].CGColor,
-        (id)[UIColor clearColor].CGColor
+    CAGradientLayer *background = [CAGradientLayer layer];
+    background.colors = @[
+        (id)[UIColor colorWithRed:0.015 green:0.003 blue:0.006 alpha:1.0].CGColor,
+        (id)[UIColor colorWithRed:0.15 green:0.005 blue:0.014 alpha:1.0].CGColor,
+        (id)[UIColor colorWithRed:0.025 green:0.002 blue:0.006 alpha:1.0].CGColor
     ];
-    self.topGradient.startPoint = CGPointMake(0.0, 0.5);
-    self.topGradient.endPoint = CGPointMake(1.0, 0.5);
-    [self.view.layer addSublayer:self.topGradient];
-
-    self.bottomGradient = [CAGradientLayer layer];
-    self.bottomGradient.colors = @[
-        (id)[UIColor clearColor].CGColor,
-        (id)[self.chzRed colorWithAlphaComponent:0.16].CGColor,
-        (id)[UIColor clearColor].CGColor
-    ];
-    self.bottomGradient.startPoint = CGPointMake(0.0, 0.5);
-    self.bottomGradient.endPoint = CGPointMake(1.0, 0.5);
-    [self.view.layer addSublayer:self.bottomGradient];
-
-    UIView *topGlow = [[UIView alloc] initWithFrame:CGRectZero];
-    topGlow.tag = 7001;
-    topGlow.backgroundColor = UIColor.clearColor;
-    topGlow.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.70].CGColor;
-    topGlow.layer.borderWidth = 1.3;
-    topGlow.layer.cornerRadius = 190.0;
-    topGlow.layer.shadowColor = self.chzRed.CGColor;
-    topGlow.layer.shadowOpacity = 0.55;
-    topGlow.layer.shadowRadius = 18.0;
-    topGlow.layer.shadowOffset = CGSizeZero;
-    [self.view addSubview:topGlow];
+    background.locations = @[@0.0, @0.52, @1.0];
+    background.startPoint = CGPointMake(0.0, 0.0);
+    background.endPoint = CGPointMake(1.0, 1.0);
+    background.name = @"RKNLoginBackground";
+    [self.view.layer addSublayer:background];
 
     UIView *card = [[UIView alloc] initWithFrame:CGRectZero];
     card.tag = 7005;
-    card.backgroundColor = [UIColor colorWithRed:0.055 green:0.055 blue:0.070 alpha:0.86];
-    card.layer.cornerRadius = 26.0;
+    card.backgroundColor = [UIColor colorWithRed:0.035 green:0.008 blue:0.012 alpha:0.96];
+    card.layer.cornerRadius = 22.0;
     card.layer.cornerCurve = kCACornerCurveContinuous;
     card.layer.borderWidth = 1.0;
     card.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.34].CGColor;
-    card.layer.shadowColor = self.chzRed.CGColor;
-    card.layer.shadowOpacity = 0.28;
-    card.layer.shadowRadius = 28.0;
-    card.layer.shadowOffset = CGSizeZero;
+    card.layer.shadowColor = UIColor.blackColor.CGColor;
+    card.layer.shadowOpacity = 0.38;
+    card.layer.shadowRadius = 22.0;
+    card.layer.shadowOffset = CGSizeMake(0.0, 10.0);
     [self.view addSubview:card];
 
-    UIBlurEffect *glassEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemChromeMaterialDark];
-    UIVisualEffectView *glass = [[UIVisualEffectView alloc] initWithEffect:glassEffect];
-    glass.tag = 7020;
-    glass.userInteractionEnabled = NO;
-    glass.layer.cornerRadius = 26.0;
-    glass.layer.cornerCurve = kCACornerCurveContinuous;
-    glass.clipsToBounds = YES;
-    glass.alpha = 0.68;
-    [card addSubview:glass];
+    self.lockView = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"lock.fill"]];
+    self.lockView.tag = 7016;
+    self.lockView.tintColor = self.chzRed;
+    self.lockView.contentMode = UIViewContentModeScaleAspectFit;
+    self.lockView.accessibilityLabel = @"Cadeado";
+    [self.view addSubview:self.lockView];
 
-    // A build de avaliação usa RKN como marca visível; a autenticação permanece ChzLogin.
-    self.logoView = [[UIImageView alloc] initWithImage:nil];
-    self.logoView.tag = 7016;
-    self.logoView.contentMode = UIViewContentModeScaleAspectFit;
-    self.logoView.hidden = (self.logoView.image == nil);
-    self.logoView.accessibilityLabel = @"RKN";
-    [self.view addSubview:self.logoView];
-    UILabel *rknTitle = [[UILabel alloc] initWithFrame:CGRectZero];
-    rknTitle.tag = 7017;
-    rknTitle.text = @"RKN";
-    rknTitle.textAlignment = NSTextAlignmentCenter;
-    rknTitle.textColor = self.chzWhite;
-    rknTitle.font = [UIFont systemFontOfSize:42.0 weight:UIFontWeightBlack];
-    rknTitle.hidden = NO;
-    [self.view addSubview:rknTitle];
-
-    UILabel *subtitle = [[UILabel alloc] initWithFrame:CGRectZero];
-    subtitle.tag = 7004;
-    subtitle.text = @"Acesse sua conta RKN";
-    subtitle.textColor = self.chzMutedWhite;
-    subtitle.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightMedium];
-    subtitle.textAlignment = NSTextAlignmentCenter;
-    [self.view addSubview:subtitle];
+    UILabel *title = [[UILabel alloc] initWithFrame:CGRectZero];
+    title.tag = 7017;
+    title.text = @"ACESSO";
+    title.textAlignment = NSTextAlignmentCenter;
+    title.textColor = self.chzWhite;
+    title.font = [UIFont systemFontOfSize:28.0 weight:UIFontWeightBold];
+    [self.view addSubview:title];
 
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
     label.tag = 7006;
     label.text = @"KEY DE ACESSO";
     label.textColor = self.chzWhite;
-    label.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightBold];
+    label.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightBold];
     [card addSubview:label];
 
     self.keyField = [[UITextField alloc] initWithFrame:CGRectZero];
     self.keyField.tag = 7007;
     self.keyField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:@"Digite sua key" attributes:@{NSForegroundColorAttributeName:[UIColor colorWithWhite:0.42 alpha:1.0]}];
     self.keyField.textColor = self.chzWhite;
-    self.keyField.font = [UIFont systemFontOfSize:20.0 weight:UIFontWeightMedium];
-    self.keyField.backgroundColor = [UIColor colorWithWhite:0.10 alpha:0.72];
-    self.keyField.layer.cornerRadius = 14.0;
+    self.keyField.font = [UIFont systemFontOfSize:18.0 weight:UIFontWeightMedium];
+    self.keyField.backgroundColor = [UIColor colorWithRed:0.10 green:0.018 blue:0.025 alpha:0.84];
+    self.keyField.layer.cornerRadius = 13.0;
     self.keyField.layer.cornerCurve = kCACornerCurveContinuous;
     self.keyField.layer.borderWidth = 1.0;
-    self.keyField.layer.borderColor = [UIColor colorWithWhite:0.95 alpha:0.18].CGColor;
+    self.keyField.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.30].CGColor;
     self.keyField.autocorrectionType = UITextAutocorrectionTypeNo;
     self.keyField.autocapitalizationType = UITextAutocapitalizationTypeNone;
     self.keyField.returnKeyType = UIReturnKeyDone;
     self.keyField.keyboardAppearance = UIKeyboardAppearanceDark;
     self.keyField.delegate = self;
-
-    UIView *left = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 58, 50)];
-    UIImageView *keyIcon = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"key"]];
-    keyIcon.frame = CGRectMake(18, 13, 24, 24);
+    UIView *left = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 48, 48)];
+    UIImageView *keyIcon = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"key.fill"]];
+    keyIcon.frame = CGRectMake(15, 13, 20, 20);
     keyIcon.tintColor = self.chzRed;
     keyIcon.contentMode = UIViewContentModeScaleAspectFit;
     [left addSubview:keyIcon];
     self.keyField.leftView = left;
     self.keyField.leftViewMode = UITextFieldViewModeAlways;
     [card addSubview:self.keyField];
-
-    self.didButton = [self makeButton:@"OBTER DID" filled:NO action:@selector(didTapped:)];
-    self.didButton.tag = 7008;
-    UIImage *didIcon = [UIImage systemImageNamed:@"doc.on.clipboard"];
-    if (didIcon) {
-        [self.didButton setImage:[didIcon imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
-        self.didButton.tintColor = [UIColor colorWithWhite:0.82 alpha:1.0];
-        self.didButton.imageEdgeInsets = UIEdgeInsetsMake(0, -8, 0, 8);
-    }
-    [card addSubview:self.didButton];
 
     self.loginButton = [self makeButton:@"ENTRAR" filled:YES action:@selector(loginTapped:)];
     self.loginButton.tag = 7009;
@@ -203,7 +152,7 @@
     self.statusLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     self.statusLabel.tag = 7015;
     self.statusLabel.textColor = self.chzMutedWhite;
-    self.statusLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightMedium];
+    self.statusLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightMedium];
     self.statusLabel.textAlignment = NSTextAlignmentCenter;
     self.statusLabel.numberOfLines = 2;
     self.statusLabel.accessibilityIdentifier = @"chz.login.status";
@@ -212,37 +161,33 @@
     UILabel *support = [[UILabel alloc] initWithFrame:CGRectZero];
     support.tag = 7010;
     support.text = @"SUPORTE";
-    support.textColor = [UIColor colorWithWhite:0.50 alpha:1.0];
-    support.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightBold];
+    support.textColor = [UIColor colorWithWhite:0.58 alpha:1.0];
+    support.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightBold];
     support.textAlignment = NSTextAlignmentCenter;
     [self.view addSubview:support];
 
     UIView *leftLine = [[UIView alloc] initWithFrame:CGRectZero];
     leftLine.tag = 7011;
-    leftLine.backgroundColor = [UIColor colorWithWhite:0.30 alpha:0.9];
+    leftLine.backgroundColor = [self.chzRed colorWithAlphaComponent:0.28];
     [self.view addSubview:leftLine];
 
     UIView *rightLine = [[UIView alloc] initWithFrame:CGRectZero];
     rightLine.tag = 7012;
-    rightLine.backgroundColor = [UIColor colorWithWhite:0.30 alpha:0.9];
+    rightLine.backgroundColor = [self.chzRed colorWithAlphaComponent:0.28];
     [self.view addSubview:rightLine];
 
     UIButton *discord = [UIButton buttonWithType:UIButtonTypeSystem];
     discord.tag = 7013;
-    discord.accessibilityLabel = @"Discord";
-    discord.layer.cornerRadius = 26.0;
+    discord.accessibilityLabel = @"Suporte";
+    discord.layer.cornerRadius = 22.0;
     discord.layer.borderWidth = 1.0;
-    discord.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.45].CGColor;
-    discord.backgroundColor = [UIColor colorWithWhite:0.10 alpha:0.88];
-    discord.layer.shadowColor = UIColor.blackColor.CGColor;
-    discord.layer.shadowOpacity = 0.16;
-    discord.layer.shadowRadius = 10.0;
-    discord.layer.shadowOffset = CGSizeZero;
+    discord.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.42].CGColor;
+    discord.backgroundColor = [UIColor colorWithRed:0.10 green:0.018 blue:0.025 alpha:0.90];
     UIImage *discordImage = [self chzImageNamed:@"discord"];
     if (discordImage) {
         [discord setImage:[discordImage imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal] forState:UIControlStateNormal];
     } else {
-        UIImage *fallback = [UIImage systemImageNamed:@"message.fill"];
+        UIImage *fallback = [UIImage systemImageNamed:@"questionmark.circle.fill"];
         [discord setImage:[fallback imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
         discord.tintColor = self.chzWhite;
     }
@@ -280,109 +225,73 @@
     CGFloat H = CGRectGetHeight(self.view.bounds);
     if (W <= 0.0 || H <= 0.0) return;
 
+    for (CALayer *layer in self.view.layer.sublayers) {
+        if ([layer.name isEqualToString:@"RKNLoginBackground"]) {
+            layer.frame = self.view.bounds;
+        }
+    }
     CGFloat safeTop = self.view.safeAreaInsets.top;
     CGFloat safeBottom = self.view.safeAreaInsets.bottom;
     CGFloat availableHeight = MAX(1.0, H - safeTop - safeBottom);
-    CGFloat scale = MIN(1.0, MAX(0.78, availableHeight / 760.0));
-    BOOL compact = availableHeight < 650.0;
+    CGFloat scale = MIN(1.0, MAX(0.82, availableHeight / 760.0));
     BOOL tablet = MIN(W, H) >= 600.0;
+    CGFloat sideInset = tablet ? 44.0 : 24.0;
+    CGFloat cardW = MIN(W - 2.0 * sideInset, tablet ? 520.0 : 360.0);
+    CGFloat contentW = cardW - 48.0 * scale;
+    CGFloat lockSize = (tablet ? 66.0 : 54.0) * scale;
+    CGFloat titleY = safeTop + (tablet ? 58.0 : 74.0) * scale;
+    UIImageView *lock = (UIImageView *)[self.view viewWithTag:7016];
+    lock.frame = CGRectMake((W - lockSize) / 2.0, titleY, lockSize, lockSize);
 
-    self.topGradient.frame = CGRectMake(MAX(0.0, W * 0.20), safeTop + 122.0 * scale, W * 0.60, 2.0);
-    self.bottomGradient.frame = CGRectMake(MAX(0.0, W * 0.16), H - safeBottom - 250.0 * scale, W * 0.68, 3.0);
+    UILabel *title = (UILabel *)[self.view viewWithTag:7017];
+    title.frame = CGRectMake(20.0, CGRectGetMaxY(lock.frame) + 10.0 * scale, W - 40.0, 38.0 * scale);
+    title.font = [UIFont systemFontOfSize:(tablet ? 32.0 : 28.0) * scale weight:UIFontWeightBold];
 
-    CGFloat glowDiameter = MIN(W * 0.54, tablet ? 360.0 : 285.0);
-    UIView *glow = [self.view viewWithTag:7001];
-    glow.frame = CGRectMake((W - glowDiameter) / 2.0, safeTop + 22.0 * scale, glowDiameter, glowDiameter * 0.28);
-    glow.layer.cornerRadius = glow.frame.size.height / 2.0;
-    glow.layer.borderWidth = 0.0;
-    glow.layer.shadowOpacity = 0.0;
-
-    CGFloat logoY = safeTop + (tablet ? 58.0 : 68.0) * scale;
-    CGFloat logoW = MIN(W * (tablet ? 0.62 : 0.62), tablet ? 500.0 : 300.0);
-    UIImageView *logoView = (UIImageView *)[self.view viewWithTag:7016];
-    logoView.hidden = YES;
-    logoView.frame = CGRectZero;
-    UILabel *rknTitle = (UILabel *)[self.view viewWithTag:7017];
-    rknTitle.frame = CGRectMake(20.0, logoY + 14.0 * scale, W - 40.0, 58.0 * scale);
-    rknTitle.font = [UIFont systemFontOfSize:42.0 * scale weight:UIFontWeightBlack];
-
-    UILabel *subtitle = (UILabel *)[self.view viewWithTag:7004];
-    subtitle.font = [UIFont systemFontOfSize:16.0 * scale weight:UIFontWeightMedium];
-    CGFloat logoBottom = CGRectGetMaxY(rknTitle.frame);
-    subtitle.frame = CGRectMake(20.0, logoBottom + 13.0 * scale, W - 40.0, 25.0 * scale);
-
-    CGFloat maxCardWidth = tablet ? 726.0 : 680.0;
-    CGFloat sideInset = tablet ? 42.0 : 34.0;
-    CGFloat cardW = MIN(W - 2.0 * sideInset, maxCardWidth);
-    CGFloat cardY = CGRectGetMaxY(subtitle.frame) + (tablet ? 42.0 : (compact ? 20.0 : 30.0)) * scale;
-    CGFloat horizontalPadding = (tablet ? 46.0 : (compact ? 24.0 : 30.0)) * scale;
-    CGFloat contentW = cardW - 2.0 * horizontalPadding;
-    CGFloat cardTop = (tablet ? 42.0 : 25.0) * scale;
-    CGFloat labelH = (tablet ? 30.0 : 24.0) * scale;
-    CGFloat gapAfterLabel = (tablet ? 22.0 : 16.0) * scale;
-    CGFloat fieldH = (tablet ? 80.0 : 56.0) * scale;
-    CGFloat controlGap = (tablet ? 18.0 : 12.0) * scale;
-    CGFloat didH = (tablet ? 76.0 : 56.0) * scale;
-    CGFloat loginH = (tablet ? 84.0 : 58.0) * scale;
-    CGFloat statusGap = (tablet ? 12.0 : 8.0) * scale;
-    CGFloat statusH = (tablet ? 34.0 : 28.0) * scale;
-    CGFloat cardH = cardTop + labelH + gapAfterLabel + fieldH + controlGap + didH + controlGap + loginH + statusGap + statusH + (tablet ? 18.0 : 12.0) * scale;
-    if (compact && !tablet) cardH = MIN(cardH, 382.0 * scale);
+    CGFloat cardY = CGRectGetMaxY(title.frame) + (tablet ? 28.0 : 24.0) * scale;
+    CGFloat cardH = (tablet ? 292.0 : 250.0) * scale;
     UIView *card = [self.view viewWithTag:7005];
     card.frame = CGRectMake((W - cardW) / 2.0, cardY, cardW, cardH);
-    UIVisualEffectView *glass = (UIVisualEffectView *)[card viewWithTag:7020];
-    glass.frame = card.bounds;
-    glass.layer.cornerRadius = card.layer.cornerRadius;
+
+    CGFloat padding = 24.0 * scale;
+    CGFloat labelH = 22.0 * scale;
+    CGFloat fieldH = (tablet ? 64.0 : 52.0) * scale;
+    CGFloat buttonH = (tablet ? 64.0 : 52.0) * scale;
+    CGFloat gap = 15.0 * scale;
+    CGFloat contentHeight = labelH + 8.0 * scale + fieldH + gap + buttonH;
+    CGFloat contentTop = MAX(22.0 * scale, (cardH - contentHeight - 22.0 * scale) / 2.0);
 
     UILabel *label = (UILabel *)[card viewWithTag:7006];
-    label.font = [UIFont systemFontOfSize:17.0 * scale weight:UIFontWeightBold];
-    label.frame = CGRectMake(horizontalPadding, cardTop, contentW, labelH);
+    label.frame = CGRectMake(padding, contentTop, contentW, labelH);
 
     UITextField *field = (UITextField *)[card viewWithTag:7007];
-    CGFloat fieldY = CGRectGetMaxY(label.frame) + gapAfterLabel;
-    field.frame = CGRectMake(horizontalPadding, fieldY, contentW, fieldH);
-    field.layer.cornerRadius = 18.0 * scale;
-
-    UIButton *did = (UIButton *)[card viewWithTag:7008];
-    CGFloat didY = CGRectGetMaxY(field.frame) + controlGap;
-    did.frame = CGRectMake(horizontalPadding + 2.0 * scale, didY, contentW - 4.0 * scale, didH);
-    did.layer.cornerRadius = (tablet ? 22.0 : 18.0) * scale;
-    did.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 24.0 : 19.0) * scale weight:UIFontWeightBold];
+    CGFloat fieldY = CGRectGetMaxY(label.frame) + 8.0 * scale;
+    field.frame = CGRectMake(padding, fieldY, contentW, fieldH);
+    field.layer.cornerRadius = 13.0 * scale;
 
     UIButton *login = (UIButton *)[card viewWithTag:7009];
-    CGFloat loginY = CGRectGetMaxY(did.frame) + controlGap;
-    login.frame = CGRectMake(horizontalPadding + 2.0 * scale, loginY, contentW - 4.0 * scale, loginH);
-    login.layer.cornerRadius = (tablet ? 22.0 : 18.0) * scale;
-    login.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 26.0 : 21.0) * scale weight:UIFontWeightBold];
+    CGFloat loginY = CGRectGetMaxY(field.frame) + gap;
+    login.frame = CGRectMake(padding, loginY, contentW, buttonH);
+    login.layer.cornerRadius = 14.0 * scale;
+    login.titleLabel.font = [UIFont systemFontOfSize:(tablet ? 21.0 : 18.0) * scale weight:UIFontWeightBold];
 
     UIActivityIndicatorView *indicator = (UIActivityIndicatorView *)[card viewWithTag:7014];
     indicator.center = CGPointMake(CGRectGetMidX(login.frame), CGRectGetMidY(login.frame));
 
     UILabel *status = (UILabel *)[card viewWithTag:7015];
-    status.frame = CGRectMake(horizontalPadding, CGRectGetMaxY(login.frame) + statusGap, contentW, statusH);
+    status.frame = CGRectMake(padding, CGRectGetMaxY(login.frame) + 7.0 * scale, contentW, 30.0 * scale);
 
     UILabel *support = (UILabel *)[self.view viewWithTag:7010];
     UIView *leftLine = [self.view viewWithTag:7011];
     UIView *rightLine = [self.view viewWithTag:7012];
     UIButton *discord = (UIButton *)[self.view viewWithTag:7013];
-    CGFloat supportY = CGRectGetMaxY(card.frame) + (tablet ? 54.0 : (compact ? 22.0 : 30.0)) * scale;
-    CGFloat lineGap = tablet ? 88.0 : 74.0;
-    support.frame = CGRectMake((W - 120.0) / 2.0, supportY, 120.0, 24.0 * scale);
-    leftLine.frame = CGRectMake(sideInset + 26.0, supportY + 11.0 * scale, MAX(0.0, W / 2.0 - lineGap), 1.0);
-    rightLine.frame = CGRectMake(W / 2.0 + lineGap, supportY + 11.0 * scale, MAX(0.0, W / 2.0 - lineGap - sideInset - 26.0), 1.0);
-    CGFloat icon = (tablet ? 76.0 : 52.0) * scale;
-    discord.frame = CGRectMake((W - icon) / 2.0, supportY + 43.0 * scale, icon, icon);
+    CGFloat supportY = CGRectGetMaxY(card.frame) + (tablet ? 42.0 : 28.0) * scale;
+    CGFloat lineGap = tablet ? 82.0 : 68.0;
+    support.frame = CGRectMake((W - 100.0) / 2.0, supportY, 100.0, 22.0 * scale);
+    leftLine.frame = CGRectMake(sideInset + 8.0, supportY + 10.0 * scale, MAX(0.0, W / 2.0 - lineGap), 1.0);
+    rightLine.frame = CGRectMake(W / 2.0 + lineGap, supportY + 10.0 * scale, MAX(0.0, W / 2.0 - lineGap - sideInset - 8.0), 1.0);
+    CGFloat icon = (tablet ? 64.0 : 46.0) * scale;
+    discord.frame = CGRectMake((W - icon) / 2.0, supportY + 32.0 * scale, icon, icon);
     discord.layer.cornerRadius = icon / 2.0;
-
-    CGFloat overflow = CGRectGetMaxY(discord.frame) - (H - safeBottom - 18.0);
-    if (overflow > 0.0) {
-        CGFloat shift = MIN(overflow, MAX(0.0, logoY - safeTop - 10.0));
-        for (UIView *view in self.view.subviews) {
-            if (view == card) continue;
-            view.center = CGPointMake(view.center.x, view.center.y - shift);
-        }
-        card.center = CGPointMake(card.center.x, card.center.y - shift);
-    }
 }
 
 - (UIStatusBarStyle)preferredStatusBarStyle {
@@ -391,13 +300,6 @@
 
 - (void)chz_dismissKeyboard { [self.view endEditing:YES]; }
 - (BOOL)textFieldShouldReturn:(UITextField *)textField { [textField resignFirstResponder]; return YES; }
-
-- (void)didTapped:(__unused UIButton *)sender {
-    NSURL *url = [NSURL URLWithString:@"https://udid.baontq.xyz/udid.php?id=23741&openurl=(null)"];
-    if (url) {
-        [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
-    }
-}
 
 - (void)loginTapped:(UIButton *)sender {
     NSString *key = [self.keyField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
@@ -411,7 +313,6 @@
     self.loginFinishing = NO;
     sender.enabled = NO;
     self.keyField.enabled = NO;
-    self.didButton.enabled = NO;
     self.statusLabel.hidden = NO;
     self.statusLabel.text = @"Validando sua key…";
     self.statusLabel.textColor = self.chzMutedWhite;
@@ -428,7 +329,6 @@
             self.loginFinishing = NO;
             sender.enabled = YES;
             self.keyField.enabled = YES;
-            self.didButton.enabled = YES;
             NSString *safe = ([message isKindOfClass:[NSString class]] && message.length) ? message : @"Não foi possível validar a key. Verifique a conexão e tente novamente.";
             self.statusLabel.text = safe;
             self.statusLabel.textColor = [self.chzRed colorWithAlphaComponent:0.95];
@@ -450,7 +350,6 @@
     self.loginFinishing = YES;
     self.loginButton.enabled = NO;
     self.keyField.enabled = NO;
-    self.didButton.enabled = NO;
     self.statusLabel.text = @"Acesso autorizado.";
     self.statusLabel.textColor = [UIColor colorWithRed:0.25 green:0.90 blue:0.55 alpha:1.0];
 

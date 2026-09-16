@@ -65,15 +65,23 @@ static NSString * const CHZLocalSessionMarker = @"com.chzpriv.login.session_avai
     return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
 }
 
-+ (BOOL)saveSessionForKey:(NSString *)key expiry:(NSString *)expiry error:(NSError **)error {
++ (BOOL)saveSessionForKey:(NSString *)key
+                    expiry:(NSString *)expiry
+                  deviceID:(NSString *)deviceID
+                     error:(NSError **)error {
     if (![key isKindOfClass:[NSString class]] || key.length == 0) {
         if (error) *error = [NSError errorWithDomain:@"CHZKeychain" code:1 userInfo:@{NSLocalizedDescriptionKey: @"A key está vazia."}];
+        return NO;
+    }
+    if (![deviceID isKindOfClass:[NSString class]] || deviceID.length == 0) {
+        if (error) *error = [NSError errorWithDomain:@"CHZKeychain" code:2 userInfo:@{NSLocalizedDescriptionKey: @"O dispositivo validado está ausente."}];
         return NO;
     }
 
     NSDictionary *session = @{
         @"key": key,
-        @"expiry": [expiry isKindOfClass:[NSString class]] ? expiry : @""
+        @"expiry": [expiry isKindOfClass:[NSString class]] ? expiry : @"",
+        @"deviceID": deviceID
     };
     NSError *jsonError = nil;
     NSData *valueData = [NSJSONSerialization dataWithJSONObject:session options:0 error:&jsonError];

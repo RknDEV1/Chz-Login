@@ -6,6 +6,62 @@
 
 @implementation CHZAuthManager
 
+- (NSString *)chzCurrentDeviceID {
+    NSString *deviceID = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+    return [deviceID isKindOfClass:[NSString class]] ? deviceID : @"";
+}
+
+- (NSString *)chzNormalizedDeviceID:(NSString *)value {
+    if (![value isKindOfClass:[NSString class]]) return @"";
+    NSString *trimmed = [value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    return [[trimmed stringByReplacingOccurrencesOfString:@"-" withString:@""] lowercaseString];
+}
+
+- (NSString *)chzDeviceIDFromObject:(id)object {
+    if (![object isKindOfClass:[NSDictionary class]]) return nil;
+    NSDictionary *dictionary = (NSDictionary *)object;
+    NSArray<NSString *> *keys = @[@"udid", @"deviceID", @"deviceId", @"device_id", @"hwid", @"identifierForVendor"];
+    for (NSString *key in keys) {
+        id value = [dictionary objectForKey:key];
+        if ([value isKindOfClass:[NSString class]] && [value length] > 0) return value;
+    }
+    NSArray<NSString *> *nestedKeys = @[@"data", @"result", @"device", @"package"];
+    for (NSString *key in nestedKeys) {
+        NSString *nested = [self chzDeviceIDFromObject:[dictionary objectForKey:key]];
+        if (nested.length > 0) return nested;
+    }
+    return nil;
+}
+
+- (NSString *)chzMessageFromError:(NSDictionary *)error fallback:(NSString *)fallback {
+    if ([error isKindOfClass:[NSDictionary class]]) {
+        id detail = [error objectForKey:@"message"] ?: [error objectForKey:@"error"] ?: [error objectForKey:@"msg"];
+        if ([detail isKindOfClass:[NSString class]] && [detail length] > 0) return detail;
+    }
+    return fallback;
+}
+
+- (BOOL)chzDeviceResponseIsValid:(NSDictionary *)payload currentDeviceID:(NSString *)currentDeviceID {
+    if (![payload isKindOfClass:[NSDictionary class]] || currentDeviceID.length == 0) return NO;
+
+    NSString *serverDeviceID = [self chzDeviceIDFromObject:payload];
+    if (serverDeviceID.length > 0) {
+        return [[self chzNormalizedDeviceID:serverDeviceID] isEqualToString:[self chzNormalizedDeviceID:currentDeviceID]];
+    }
+
+    id explicitStatus = [payload objectForKey:@"success"] ?: [payload objectForKey:@"valid"] ?: [payload objectForKey:@"authorized"] ?: [payload objectForKey:@"status"];
+    if ([explicitStatus isKindOfClass:[NSNumber class]]) {
+        return [explicitStatus boolValue];
+    }
+    if ([explicitStatus isKindOfClass:[NSString class]]) {
+        NSString *normalized = [[(NSString *)explicitStatus stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] lowercaseString];
+        return [@[@"true", @"valid", @"success", @"ok", @"authorized", @"active"] containsObject:normalized];
+    }
+
+    // Sem contrato reconhecível, não há prova de vínculo no servidor: falhar fechado.
+    return NO;
+}
+
 - (BOOL)chzResponseConfirmsKey:(NSString *)key
                         client:(APIClient *)client
                         payload:(NSDictionary *)payload {
@@ -135,15 +191,31 @@
     NSDictionary *session = [CHZKeychain loadSession:nil];
     NSString *key = [session objectForKey:@"key"];
     NSString *expiry = [session objectForKey:@"expiry"];
+    NSString *savedDeviceID = [session objectForKey:@"deviceID"];
+    NSString *currentDeviceID = [self chzCurrentDeviceID];
     NSDate *expirationDate = [self chzDateFromExpiryString:expiry];
+    BOOL sameDevice = [self chzNormalizedDeviceID:savedDeviceID].length > 0 &&
+        [[self chzNormalizedDeviceID:savedDeviceID] isEqualToString:[self chzNormalizedDeviceID:currentDeviceID]];
 
-    if (![key isKindOfClass:[NSString class]] || key.length == 0 || !expirationDate || [expirationDate timeIntervalSinceNow] <= 0.0) {
+    if (![key isKindOfClass:[NSString class]] || key.length == 0 || !expirationDate || [expirationDate timeIntervalSinceNow] <= 0.0 || !sameDevice) {
         NSLog(@"[CHZLogin] sessão local ausente, inválida ou expirada; login será apresentado");
         if (session) [CHZKeychain deleteKey:nil];
         return NO;
     }
-    NSLog(@"[CHZLogin] sessão local válida; expira em %@", expirationDate);
+    NSLog(@"[CHZLogin] sessão local válida neste dispositivo; expira em %@", expirationDate);
     return YES;
+}
+
+- (void)validateSavedSessionWithSuccess:(CHZAuthSuccess)success failure:(CHZAuthFailure)failure {
+    NSDictionary *session = [CHZKeychain loadSession:nil];
+    NSString *key = [session objectForKey:@"key"];
+    if (![self hasValidSavedSession] || ![key isKindOfClass:[NSString class]] || key.length == 0) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (failure) failure(@"Sessão ausente, expirada ou vinculada a outro dispositivo.");
+        });
+        return;
+    }
+    [self loginWithKey:key success:success failure:failure];
 }
 
 - (void)clearSavedSession {
@@ -170,7 +242,7 @@
 
         [client setLanguage:@"en"];
 
-        NSString *udid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+        NSString *udid = [self chzCurrentDeviceID];
         if (udid.length > 0) {
             [client setUDID:udid];
         }
@@ -180,6 +252,7 @@
               (unsigned long)udid.length);
 
         [client hideUI:YES];
+        [client strictMode:YES];
         [client silentMode:YES];
     }
     return self;
@@ -203,46 +276,73 @@
 
     [client onLogin:trimmedKey
           onSuccess:^(NSDictionary *data) {
-        // O callback do SDK, isoladamente, não é suficiente para fechar a tela.
-        // Confirme a key retornada e os dados do package antes de liberar o login.
-        BOOL confirmed = NO;
+        BOOL keyConfirmed = NO;
         @try {
-            confirmed = [self chzResponseConfirmsKey:trimmedKey client:client payload:data];
+            keyConfirmed = [self chzResponseConfirmsKey:trimmedKey client:client payload:data];
         } @catch (NSException *exception) {
             NSLog(@"[CHZLogin] exceção ao processar resposta do SDK: %@", exception.reason ?: @"sem motivo");
         }
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if (confirmed) {
-                NSString *expiry = [self chzSafeExpiryDateFromClient:client key:trimmedKey payload:data];
-                NSError *saveError = nil;
-                BOOL saved = NO;
-                if (expiry.length > 0) {
-                    saved = [CHZKeychain saveSessionForKey:trimmedKey expiry:expiry error:&saveError];
-                }
-                NSLog(@"[CHZLogin] sessão salva=%@; expiração=%@; erro=%@",
-                      saved ? @"SIM" : @"NAO",
-                      expiry.length > 0 ? expiry : @"não disponível",
-                      saveError.localizedDescription ?: @"nenhum");
-                // A API confirmou a key; o estado da sessão atual pode ser atualizado
-                // mesmo se o SDK não expuser uma expiração persistível nesta resposta.
-                [[NSNotificationCenter defaultCenter] postNotificationName:@"CHZLoginDidAuthenticateNotification" object:nil];
-                if (success) success();
-            } else if (failure) {
-                failure(@"A key não pertence ao package autorizado ou foi recusada pela API.");
-            }
-        });
-    }
-          onFailure:^(NSDictionary *error) {
-        NSString *message = @"Key recusada pela API.";
-
-        if ([error isKindOfClass:[NSDictionary class]]) {
-            NSDictionary *safeError = (NSDictionary *)error;
-            id detail = [safeError objectForKey:@"message"] ?: [safeError objectForKey:@"error"] ?: [safeError objectForKey:@"msg"];
-            if ([detail isKindOfClass:[NSString class]] && [detail length] > 0) {
-                message = detail;
-            }
+        if (!keyConfirmed) {
+            [CHZKeychain deleteKey:nil];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (failure) failure(@"A key não pertence ao package autorizado ou foi recusada pela API.");
+            });
+            return;
         }
 
+        NSString *currentDeviceID = [self chzCurrentDeviceID];
+        if (currentDeviceID.length == 0) {
+            [CHZKeychain deleteKey:nil];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (failure) failure(@"Não foi possível identificar este dispositivo.");
+            });
+            return;
+        }
+
+        [client setUDID:currentDeviceID];
+        [client onCheckDevice:^(NSDictionary *deviceData) {
+            BOOL deviceConfirmed = NO;
+            @try {
+                deviceConfirmed = [self chzDeviceResponseIsValid:deviceData currentDeviceID:currentDeviceID];
+            } @catch (NSException *exception) {
+                NSLog(@"[CHZLogin] exceção na confirmação do dispositivo: %@", exception.reason ?: @"sem motivo");
+            }
+            if (!deviceConfirmed) {
+                [CHZKeychain deleteKey:nil];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if (failure) failure(@"Esta key está vinculada a outro dispositivo ou o vínculo não pôde ser confirmado.");
+                });
+                return;
+            }
+
+            NSString *expiry = [self chzSafeExpiryDateFromClient:client key:trimmedKey payload:data];
+            NSError *saveError = nil;
+            BOOL saved = NO;
+            if (expiry.length > 0) {
+                saved = [CHZKeychain saveSessionForKey:trimmedKey
+                                                expiry:expiry
+                                              deviceID:currentDeviceID
+                                                 error:&saveError];
+            }
+            NSLog(@"[CHZLogin] dispositivo confirmado; sessão salva=%@; expiração=%@; erro=%@",
+                  saved ? @"SIM" : @"NAO",
+                  expiry.length > 0 ? expiry : @"não disponível",
+                  saveError.localizedDescription ?: @"nenhum");
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"CHZLoginDidAuthenticateNotification" object:nil];
+                if (success) success();
+            });
+        } onFailure:^(NSDictionary *deviceError) {
+            [CHZKeychain deleteKey:nil];
+            NSString *message = [self chzMessageFromError:deviceError fallback:@"Esta key não está autorizada para este dispositivo."];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (failure) failure(message);
+            });
+        }];
+    }
+          onFailure:^(NSDictionary *error) {
+        [CHZKeychain deleteKey:nil];
+        NSString *message = [self chzMessageFromError:error fallback:@"Key recusada pela API."];
         dispatch_async(dispatch_get_main_queue(), ^{
             if (failure) failure(message);
         });

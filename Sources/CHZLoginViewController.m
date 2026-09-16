@@ -439,7 +439,7 @@
 }
 
 - (void)finishLogin {
-    if (self.loginFinishing || self.presentingViewController == nil) {
+    if (self.loginFinishing) {
         return;
     }
 
@@ -450,9 +450,14 @@
     self.statusLabel.text = @"Acesso autorizado.";
     self.statusLabel.textColor = [UIColor colorWithRed:0.25 green:0.90 blue:0.55 alpha:1.0];
 
-    // A transição precisa ocorrer na main thread e somente uma vez.
+    // O app hospedeiro usa esta notificação para atualizar a sessão em memória.
+    // O post ocorre antes da dispensa para evitar corrida entre UIKit e SwiftUI.
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"CHZLoginDidAuthenticateNotification" object:nil];
+
+    // A transição ocorre na main thread e somente uma vez. Não dependemos de
+    // presentingViewController, pois fullScreenCover pode usar um host intermediário.
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (self.presentingViewController != nil && !self.isBeingDismissed) {
+        if (!self.isBeingDismissed && self.presentedViewController == nil) {
             [self dismissViewControllerAnimated:YES completion:nil];
         }
     });

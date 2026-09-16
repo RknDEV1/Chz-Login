@@ -1,0 +1,94 @@
+name: Build ChzLogin XCFramework
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "Sources/**"
+      - "Resources/**"
+      - "Vendor/API/**"
+      - "Scripts/build_chzlogin_xcframework.sh"
+      - ".github/workflows/build-xcframework.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    env:
+      IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+      SDK_NAME: iphoneos
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare private configuration
+        env:
+          CHZ_API_TOKEN: ${{ secrets.CHZ_API_TOKEN }}
+          CHZ_STORE_URL: ${{ vars.CHZ_STORE_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CHZ_API_TOKEN"
+          mkdir -p ChzAuth/Sources
+          CHZ_STORE_URL="${CHZ_STORE_URL:-https://discord.gg/chzpriv}"
+          TOKEN="$CHZ_API_TOKEN" STORE="$CHZ_STORE_URL" python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          def quote(value: str) -> str:
+              return value.replace("\\", "\\\\").replace('"', '\\"')
+
+          Path("ChzAuth/Sources/CHZSecrets.h").write_text(
+              '#import <Foundation/Foundation.h>\n'
+              f'#define CHZ_API_TOKEN @"{quote(os.environ["TOKEN"])}"\n'
+              f'#define CHZ_STORE_URL @"{quote(os.environ["STORE"])}"\n',
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Build iOS XCFramework
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x Scripts/build_chzlogin_xcframework.sh
+          Scripts/build_chzlogin_xcframework.sh
+
+      - name: Audit XCFramework
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=build/ChzLogin.xcframework
+          FRAMEWORK="$ROOT/ios-arm64/ChzLogin.framework"
+          test -f "$ROOT/Info.plist"
+          test -f "$FRAMEWORK/Info.plist"
+          test -f "$FRAMEWORK/ChzLogin"
+          test -f "$FRAMEWORK/Headers/CHZAuthManager.h"
+          test -f "$FRAMEWORK/Headers/CHZKeychain.h"
+          test -f "$FRAMEWORK/CHZLoginResources.bundle/CHZPrivLogoFinal.png"
+          test -f "$FRAMEWORK/CHZLoginResources.bundle/discord.png"
+          plutil -lint "$ROOT/Info.plist"
+          plutil -lint "$FRAMEWORK/Info.plist"
+          grep -Fq 'validateSavedSessionWithSuccess' "$FRAMEWORK/Headers/CHZAuthManager.h"
+          grep -Fq 'deviceID:(NSString *)deviceID' "$FRAMEWORK/Headers/CHZKeychain.h"
+          file "$FRAMEWORK/ChzLogin"
+          otool -L "$FRAMEWORK/ChzLogin"
+          otool -l "$FRAMEWORK/ChzLogin" | grep -A4 LC_BUILD_VERSION
+
+      - name: Archive XCFramework
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f ChzAuth/Sources/CHZSecrets.h
+          ditto -c -k --sequesterRsrc --keepParent build/ChzLogin.xcframework ChzLogin.xcframework.zip
+
+      - name: Upload XCFramework artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChzLogin-xcframework-device-bound
+          path: ChzLogin.xcframework.zip
+          if-no-files-found: error

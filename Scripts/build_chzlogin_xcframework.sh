@@ -87,6 +87,21 @@ cat > "$RESOURCE_BUNDLE/Info.plist" <<'PLIST'
 </dict></plist>
 PLIST
 
+cat > "$BUILD_DIR/ChzLogin.xcframework/Info.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>AvailableLibraries</key><array><dict>
+<key>LibraryIdentifier</key><string>ios-arm64</string>
+<key>LibraryPath</key><string>ChzLogin.framework</string>
+<key>SupportedArchitectures</key><array><string>arm64</string></array>
+<key>SupportedPlatform</key><string>ios</string>
+</dict></array>
+<key>CFBundlePackageType</key><string>XFWK</string>
+<key>XCFrameworkFormatVersion</key><string>1.0</string>
+</dict></plist>
+PLIST
+
 cat > "$BUILD_DIR/ChzLogin.xcframework/BuildInfo.txt" <<INFO
 IPHONEOS_DEPLOYMENT_TARGET=$DEPLOYMENT_TARGET
 SDK_NAME=$SDK_NAME

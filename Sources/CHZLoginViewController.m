@@ -45,7 +45,7 @@
     // A referência é uma composição escura; mantém o mesmo resultado no modo claro e escuro do sistema.
     self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
     self.modalPresentationCapturesStatusBarAppearance = YES;
-    self.view.backgroundColor = UIColor.blackColor;
+    self.view.backgroundColor = [UIColor colorWithRed:0.018 green:0.018 blue:0.024 alpha:1.0];
     self.view.clipsToBounds = YES;
     [self buildInterface];
 
@@ -102,13 +102,13 @@
 
     UIView *card = [[UIView alloc] initWithFrame:CGRectZero];
     card.tag = 7005;
-    card.backgroundColor = [UIColor colorWithWhite:0.02 alpha:0.52];
-    card.layer.cornerRadius = 31.0;
+    card.backgroundColor = [UIColor colorWithRed:0.055 green:0.055 blue:0.070 alpha:0.86];
+    card.layer.cornerRadius = 26.0;
     card.layer.cornerCurve = kCACornerCurveContinuous;
     card.layer.borderWidth = 1.0;
-    card.layer.borderColor = [UIColor colorWithWhite:0.95 alpha:0.22].CGColor;
+    card.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.34].CGColor;
     card.layer.shadowColor = self.chzRed.CGColor;
-    card.layer.shadowOpacity = 0.16;
+    card.layer.shadowOpacity = 0.28;
     card.layer.shadowRadius = 28.0;
     card.layer.shadowOffset = CGSizeZero;
     [self.view addSubview:card];
@@ -117,10 +117,10 @@
     UIVisualEffectView *glass = [[UIVisualEffectView alloc] initWithEffect:glassEffect];
     glass.tag = 7020;
     glass.userInteractionEnabled = NO;
-    glass.layer.cornerRadius = 31.0;
+    glass.layer.cornerRadius = 26.0;
     glass.layer.cornerCurve = kCACornerCurveContinuous;
     glass.clipsToBounds = YES;
-    glass.alpha = 0.82;
+    glass.alpha = 0.68;
     [card addSubview:glass];
 
     // A referência usa a logo brush como marca única; não duplicar com labels.
@@ -134,9 +134,9 @@
 
     UILabel *subtitle = [[UILabel alloc] initWithFrame:CGRectZero];
     subtitle.tag = 7004;
-    subtitle.text = @"Acesse sua conta";
+    subtitle.text = @"Acesse sua conta CHZ PRIV";
     subtitle.textColor = self.chzMutedWhite;
-    subtitle.font = [UIFont systemFontOfSize:18.0 weight:UIFontWeightMedium];
+    subtitle.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightMedium];
     subtitle.textAlignment = NSTextAlignmentCenter;
     [self.view addSubview:subtitle];
 
@@ -152,11 +152,11 @@
     self.keyField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:@"Digite sua key" attributes:@{NSForegroundColorAttributeName:[UIColor colorWithWhite:0.42 alpha:1.0]}];
     self.keyField.textColor = self.chzWhite;
     self.keyField.font = [UIFont systemFontOfSize:20.0 weight:UIFontWeightMedium];
-    self.keyField.backgroundColor = [UIColor colorWithWhite:0.12 alpha:0.38];
-    self.keyField.layer.cornerRadius = 17.0;
+    self.keyField.backgroundColor = [UIColor colorWithWhite:0.10 alpha:0.72];
+    self.keyField.layer.cornerRadius = 14.0;
     self.keyField.layer.cornerCurve = kCACornerCurveContinuous;
     self.keyField.layer.borderWidth = 1.0;
-    self.keyField.layer.borderColor = [UIColor colorWithWhite:0.95 alpha:0.24].CGColor;
+    self.keyField.layer.borderColor = [UIColor colorWithWhite:0.95 alpha:0.18].CGColor;
     self.keyField.autocorrectionType = UITextAutocorrectionTypeNo;
     self.keyField.autocapitalizationType = UITextAutocapitalizationTypeNone;
     self.keyField.returnKeyType = UIReturnKeyDone;
@@ -224,9 +224,9 @@
     discord.tag = 7013;
     discord.accessibilityLabel = @"Discord";
     discord.layer.cornerRadius = 26.0;
-    discord.layer.borderWidth = 0.0;
-    discord.layer.borderColor = UIColor.clearColor.CGColor;
-    discord.backgroundColor = UIColor.clearColor;
+    discord.layer.borderWidth = 1.0;
+    discord.layer.borderColor = [self.chzRed colorWithAlphaComponent:0.45].CGColor;
+    discord.backgroundColor = [UIColor colorWithWhite:0.10 alpha:0.88];
     discord.layer.shadowColor = UIColor.blackColor.CGColor;
     discord.layer.shadowOpacity = 0.16;
     discord.layer.shadowRadius = 10.0;
@@ -247,14 +247,14 @@
 - (UIButton *)makeButton:(NSString *)title filled:(BOOL)filled action:(SEL)action {
     UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
     button.frame = CGRectZero;
-    button.layer.cornerRadius = 17.0;
+    button.layer.cornerRadius = 14.0;
     button.layer.cornerCurve = kCACornerCurveContinuous;
     button.layer.borderWidth = 1.0;
     button.layer.borderColor = filled ? [UIColor colorWithWhite:1.0 alpha:0.28].CGColor : [UIColor colorWithWhite:0.92 alpha:0.22].CGColor;
-    button.backgroundColor = filled ? [self.chzRed colorWithAlphaComponent:0.88] : [UIColor colorWithWhite:0.16 alpha:0.45];
+    button.backgroundColor = filled ? [self.chzRed colorWithAlphaComponent:0.94] : [UIColor colorWithWhite:0.14 alpha:0.76];
     [button setTitle:title forState:UIControlStateNormal];
     [button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
-    button.titleLabel.font = [UIFont systemFontOfSize:(filled ? 21.0 : 19.0) weight:UIFontWeightBold];
+    button.titleLabel.font = [UIFont systemFontOfSize:(filled ? 18.0 : 16.0) weight:UIFontWeightBold];
     button.titleLabel.textAlignment = NSTextAlignmentCenter;
     button.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
     button.clipsToBounds = YES;
@@ -290,8 +290,8 @@
     glow.layer.borderWidth = 0.0;
     glow.layer.shadowOpacity = 0.0;
 
-    CGFloat logoY = safeTop + (tablet ? 72.0 : 86.0) * scale;
-    CGFloat logoW = MIN(W * (tablet ? 0.70 : 0.70), tablet ? 560.0 : 350.0);
+    CGFloat logoY = safeTop + (tablet ? 58.0 : 68.0) * scale;
+    CGFloat logoW = MIN(W * (tablet ? 0.62 : 0.62), tablet ? 500.0 : 300.0);
     UIImageView *logoView = (UIImageView *)[self.view viewWithTag:7016];
     if (logoView.image != nil) {
         logoView.hidden = NO;
@@ -303,21 +303,21 @@
     }
 
     UILabel *subtitle = (UILabel *)[self.view viewWithTag:7004];
-    subtitle.font = [UIFont systemFontOfSize:18.0 * scale weight:UIFontWeightMedium];
+    subtitle.font = [UIFont systemFontOfSize:16.0 * scale weight:UIFontWeightMedium];
     CGFloat logoBottom = logoView.image != nil ? CGRectGetMaxY(logoView.frame) : logoY;
     subtitle.frame = CGRectMake(20.0, logoBottom + 13.0 * scale, W - 40.0, 25.0 * scale);
 
     CGFloat maxCardWidth = tablet ? 726.0 : 680.0;
     CGFloat sideInset = tablet ? 42.0 : 34.0;
     CGFloat cardW = MIN(W - 2.0 * sideInset, maxCardWidth);
-    CGFloat cardY = CGRectGetMaxY(subtitle.frame) + (tablet ? 64.0 : (compact ? 28.0 : 48.0)) * scale;
-    CGFloat horizontalPadding = (tablet ? 48.0 : (compact ? 30.0 : 38.0)) * scale;
+    CGFloat cardY = CGRectGetMaxY(subtitle.frame) + (tablet ? 42.0 : (compact ? 20.0 : 30.0)) * scale;
+    CGFloat horizontalPadding = (tablet ? 46.0 : (compact ? 24.0 : 30.0)) * scale;
     CGFloat contentW = cardW - 2.0 * horizontalPadding;
-    CGFloat cardTop = (tablet ? 50.0 : 31.0) * scale;
+    CGFloat cardTop = (tablet ? 42.0 : 25.0) * scale;
     CGFloat labelH = (tablet ? 30.0 : 24.0) * scale;
-    CGFloat gapAfterLabel = (tablet ? 28.0 : 22.0) * scale;
+    CGFloat gapAfterLabel = (tablet ? 22.0 : 16.0) * scale;
     CGFloat fieldH = (tablet ? 80.0 : 56.0) * scale;
-    CGFloat controlGap = (tablet ? 24.0 : 16.0) * scale;
+    CGFloat controlGap = (tablet ? 18.0 : 12.0) * scale;
     CGFloat didH = (tablet ? 76.0 : 56.0) * scale;
     CGFloat loginH = (tablet ? 84.0 : 58.0) * scale;
     CGFloat statusGap = (tablet ? 12.0 : 8.0) * scale;
@@ -361,7 +361,7 @@
     UIView *leftLine = [self.view viewWithTag:7011];
     UIView *rightLine = [self.view viewWithTag:7012];
     UIButton *discord = (UIButton *)[self.view viewWithTag:7013];
-    CGFloat supportY = CGRectGetMaxY(card.frame) + (tablet ? 78.0 : (compact ? 30.0 : 42.0)) * scale;
+    CGFloat supportY = CGRectGetMaxY(card.frame) + (tablet ? 54.0 : (compact ? 22.0 : 30.0)) * scale;
     CGFloat lineGap = tablet ? 88.0 : 74.0;
     support.frame = CGRectMake((W - 120.0) / 2.0, supportY, 120.0, 24.0 * scale);
     leftLine.frame = CGRectMake(sideInset + 26.0, supportY + 11.0 * scale, MAX(0.0, W / 2.0 - lineGap), 1.0);

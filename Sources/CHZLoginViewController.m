@@ -123,18 +123,25 @@
     glass.alpha = 0.68;
     [card addSubview:glass];
 
-    // A referência usa a logo brush como marca única; não duplicar com labels.
-    // Usa a logo brush/grafite transparente enviada pelo usuário como referência final.
-    self.logoView = [[UIImageView alloc] initWithImage:[self chzImageNamed:@"CHZPrivLogoFinal"]];
+    // A build de avaliação usa RKN como marca visível; a autenticação permanece ChzLogin.
+    self.logoView = [[UIImageView alloc] initWithImage:nil];
     self.logoView.tag = 7016;
     self.logoView.contentMode = UIViewContentModeScaleAspectFit;
     self.logoView.hidden = (self.logoView.image == nil);
-    self.logoView.accessibilityLabel = @"CHZ PRIV";
+    self.logoView.accessibilityLabel = @"RKN";
     [self.view addSubview:self.logoView];
+    UILabel *rknTitle = [[UILabel alloc] initWithFrame:CGRectZero];
+    rknTitle.tag = 7017;
+    rknTitle.text = @"RKN";
+    rknTitle.textAlignment = NSTextAlignmentCenter;
+    rknTitle.textColor = self.chzWhite;
+    rknTitle.font = [UIFont systemFontOfSize:42.0 weight:UIFontWeightBlack];
+    rknTitle.hidden = NO;
+    [self.view addSubview:rknTitle];
 
     UILabel *subtitle = [[UILabel alloc] initWithFrame:CGRectZero];
     subtitle.tag = 7004;
-    subtitle.text = @"Acesse sua conta CHZ PRIV";
+    subtitle.text = @"Acesse sua conta RKN";
     subtitle.textColor = self.chzMutedWhite;
     subtitle.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightMedium];
     subtitle.textAlignment = NSTextAlignmentCenter;
@@ -293,18 +300,15 @@
     CGFloat logoY = safeTop + (tablet ? 58.0 : 68.0) * scale;
     CGFloat logoW = MIN(W * (tablet ? 0.62 : 0.62), tablet ? 500.0 : 300.0);
     UIImageView *logoView = (UIImageView *)[self.view viewWithTag:7016];
-    if (logoView.image != nil) {
-        logoView.hidden = NO;
-        CGFloat logoH = logoW * (857.0 / 1181.0);
-        logoView.frame = CGRectMake((W - logoW) / 2.0, logoY, logoW, logoH);
-    } else {
-        logoView.hidden = YES;
-        logoView.frame = CGRectZero;
-    }
+    logoView.hidden = YES;
+    logoView.frame = CGRectZero;
+    UILabel *rknTitle = (UILabel *)[self.view viewWithTag:7017];
+    rknTitle.frame = CGRectMake(20.0, logoY + 14.0 * scale, W - 40.0, 58.0 * scale);
+    rknTitle.font = [UIFont systemFontOfSize:42.0 * scale weight:UIFontWeightBlack];
 
     UILabel *subtitle = (UILabel *)[self.view viewWithTag:7004];
     subtitle.font = [UIFont systemFontOfSize:16.0 * scale weight:UIFontWeightMedium];
-    CGFloat logoBottom = logoView.image != nil ? CGRectGetMaxY(logoView.frame) : logoY;
+    CGFloat logoBottom = CGRectGetMaxY(rknTitle.frame);
     subtitle.frame = CGRectMake(20.0, logoBottom + 13.0 * scale, W - 40.0, 25.0 * scale);
 
     CGFloat maxCardWidth = tablet ? 726.0 : 680.0;
